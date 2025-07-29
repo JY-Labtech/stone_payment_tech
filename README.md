@@ -13,6 +13,7 @@
   <a href="#sobre">Sobre</a> •
   <a href="#tecnologias">Tecnologias</a> •
   <a href="#instalacao">Instalação</a> •
+  <a href="#flavors">Configuração de Flavors</a> •
   <a href="#uso">Uso</a> •
   <a href="#respostas">Modelo de Resposta</a> •
 </p>
@@ -29,6 +30,27 @@
 
 O `stone_payment_tech` é um plugin Flutter para integração direta com o SDK Stone, permitindo a realização de transações em maquininhas smart Android.
 
+## Gradle
+
+O gradle.wrapper.properties utilizado está na versão 8.9
+kotlin_version = '1.9.0'
+stone_sdk_version = '4.11.5'
+classpath 'com.android.tools.build:gradle:8.7.3'
+
+## 🔐 Licenciamento
+
+Para adquirir uma licença, cadastre-se no site [Licença JY Labtech](https://licenca.jylabtech.com.br).  
+Cada licença é válida por terminal. Após a compra, será gerada uma chave `licenceKey` vinculada ao terminal.
+
+### Inicialização com licença
+
+```dart
+await StonePaymentTech.initPayment(
+  handler: controller,
+  licenceKey: 'SUA_CHAVE',
+);
+```
+
 ### ✅ Máquinas compatíveis
 
 - Positivo L300
@@ -36,13 +58,14 @@ O `stone_payment_tech` é um plugin Flutter para integração direta com o SDK S
 - Ingenico APOS A8
 - Sunmi P2
 - Gertec GPOS700X
+- Tectoy T2
 
 ---
 
 ## 🚀 Tecnologias
 
 - [Flutter](https://flutter.dev/)
-- SDK Stone `v4.10.2`
+- SDK Stone `v4.11.5`
 - Comunicação via Platform Channels
 
 ---
@@ -69,6 +92,60 @@ defaultConfig {
     ...
 }
 ```
+
+> ⚠️ O SDK da Stone requer `minSdkVersion >= 23`.
+
+---
+
+## 🧩 <a name="flavors">Configuração de Flavors</a>
+
+Para utilizar o plugin corretamente, **você precisa configurar os seguintes `productFlavors` e `signingConfigs` no `android/app/build.gradle`** do seu projeto:
+
+### 👇 Exemplo completo:
+
+```gradle
+...
+
+android {
+    ....
+    signingConfigs {
+        release {
+            storeFile keyProperties.storeFile
+            keyAlias keyProperties.keyAlias
+            keyPassword keyProperties.keyPassword
+            storePassword keyProperties.storePassword
+        }
+    }
+
+    flavorDimensions "model"
+    productFlavors {
+        gertecGPOS700X {
+            dimension "model"
+            signingConfig signingConfigs.release
+        }
+        positivoSeriesL {
+            dimension "model"
+            signingConfig signingConfigs.release
+        }
+        sunmi {
+            dimension "model"
+            signingConfig signingConfigs.release
+        }
+        tectoySeriesT {
+            dimension "model"
+            signingConfig signingConfigs.release
+        }
+        ingenico {
+            dimension "model"
+            signingConfig signingConfigs.release
+        }
+    }
+}
+```
+
+> ✅ **Importante:** mesmo que o seu projeto não use todos os modelos, você precisa declarar todos os `flavors` para evitar erro de compilação, pois o plugin depende da estrutura deles.
+
+---
 
 > ⚠️ O SDK da Stone requer `minSdkVersion >= 23`.
 
