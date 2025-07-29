@@ -11,6 +11,7 @@ import br.com.jylabtech.stone_payment_tech.printer.StonePrinter;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -101,7 +102,8 @@ public class PaymentsUseCase {
       }
 
       if(userModel == null) {
-        userModel = StoneStart.init(context);
+        Map<StoneKeyType, String> stoneKeys = new HashMap<>();
+        userModel = StoneStart.init(context, stoneKeys);
       }
   }
 
@@ -442,7 +444,8 @@ public class PaymentsUseCase {
       }
       mFragment.onMessage("Iniciando ativação");
       Stone.setAppName(appName);
-      List<UserModel> userList = StoneStart.init(context);
+      Map<StoneKeyType, String> stoneKeys = new HashMap<>();
+      List<UserModel> userList = StoneStart.init(context, stoneKeys);
       userModel = userList;
 
       if (userList == null) {
