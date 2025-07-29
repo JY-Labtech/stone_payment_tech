@@ -1,0 +1,44 @@
+import 'package:flutter/material.dart';
+
+import 'payment/payment_page.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Stone Payment Tech'),
+            bottom: const TabBar(tabs: [
+              Tab(
+                child: Text("Vender"),
+              ),
+              Tab(
+                child: Text("Transações"),
+              )
+            ]),
+          ),
+          body: TabBarView(
+            children: [
+              const PaymentPage(),
+              Container(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
