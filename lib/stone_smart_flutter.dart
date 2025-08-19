@@ -23,6 +23,8 @@ class StoneTech {
 
   Future<String> getSerialNumber() async => await _check.getSerialNumber();
 
+  Future<bool> wipeLicenceLocalDatabase() async => await _check.wipeLicence();
+
   /// Function to initialize payment and register the notification handler
   Future<Payment?> initPayment({
     required IStoneHandler handler,

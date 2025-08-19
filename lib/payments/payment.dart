@@ -46,10 +46,7 @@ class Payment {
       licenceKey: licenceKey,
     );
 
-    print('*** Initializing Stone Payment with licence key: $licenceKey');
-
     _isLicenceValidated = await payment._checkLicence();
-    print('*** Licence validation result: $_isLicenceValidated');
 
     if (!_isLicenceValidated) {
       // Limpa cache pois licença inválida
