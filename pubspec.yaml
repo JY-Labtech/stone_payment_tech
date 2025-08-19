@@ -1,6 +1,6 @@
 name: stone_payment_tech
 description: Plugin Flutter para integrar sua aplicação com o SDK Android da Stone para meios de pagamento.
-version: 0.0.1
+version: 0.0.2
 repository: https://github.com/JY-Labtech/stone_payment_tech
 
 environment:
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  check_licence_tech: ^0.1.0+1
+  check_licence_tech: ^0.1.1
 
 dev_dependencies:
   flutter_test:
