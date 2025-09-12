@@ -1,3 +1,8 @@
+## 0.0.4
+
+- Add StoneStreamDialog
+- Add StoneStreamPage
+
 ## 0.0.3
 
 - Fix method check licence

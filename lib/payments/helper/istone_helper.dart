@@ -22,7 +22,7 @@ abstract class IStoneHelper {
     return StoneTransactionModel.toError(message);
   }
 
-  static Future<dynamic> callHandler({required MethodCall call, required IStoneHandler iStoneHandler, IStoneTechHandler? stoneTechHandler}) async {
+  static Future<dynamic> callHandler({required MethodCall call, required IStoneHandler iStoneHandler, IStoneTechHandler? stoneTechHandler, required Function(StoneTransactionModel) onTransaction}) async {
     switch (call.method.handler) {
       case PaymentTypeHandler.onTransactionSuccess:
         {
@@ -45,6 +45,10 @@ abstract class IStoneHelper {
       case PaymentTypeHandler.onFinishedResponse:
         {
           iStoneHandler.onFinishedResponse(call.arguments);
+          final model = _getTransactionModel(call.arguments);
+          if (model != null) {
+            onTransaction(model);
+          }
           _stSmartHandler(message: call.arguments, iStoneTechHandler: stoneTechHandler);
         }
         break;
@@ -127,6 +131,16 @@ abstract class IStoneHelper {
         break;
       default:
         throw "METHOD NOT IMPLEMENTED";
+    }
+  }
+
+  static StoneTransactionModel? _getTransactionModel(dynamic value) {
+    try {
+      final map = jsonDecode(value) as Map<String, dynamic>;
+      final transactionModel = StoneTransactionModel.fromMap(map);
+      return transactionModel;
+    } catch (e) {
+      return null;
     }
   }
 }
