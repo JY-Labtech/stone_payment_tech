@@ -5,13 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:stone_payment_tech/interface/handler/istone_handler.dart';
 import 'package:stone_payment_tech/interface/handler/istone_smart_handler.dart';
 import 'package:stone_payment_tech/interface/model/stone_printer.dart';
+import 'package:stone_payment_tech/interface/model/stone_transaction_model.dart';
 import 'package:stone_payment_tech/interface/utils/extensions/payment_type_call_ext.dart';
 import 'package:stone_payment_tech/interface/utils/types/payment_type_call.dart';
 import 'package:stone_payment_tech/licence/constants/licence_constants.dart';
 
 import 'helper/istone_helper.dart';
 
-class Payment {
+final class Payment {
   final MethodChannel channel;
   IStoneHandler paymentHandler;
   final String licenceKey;
@@ -20,6 +21,9 @@ class Payment {
   // Cache da instância criada
   static Payment? _instance;
   static bool _isLicenceValidated = false;
+  static bool _isPinpadActivated = false;
+
+  bool get isPinpadActivated => _isPinpadActivated;
 
   Payment._({
     required this.channel,
@@ -59,15 +63,24 @@ class Payment {
     _instance = payment;
     _isLicenceValidated = true;
 
-    payment.channel.setMethodCallHandler(
-      (e) => IStoneHelper.callHandler(
-        call: e,
-        iStoneHandler: paymentHandler,
-        stoneTechHandler: iStoneTechHandler,
-      ),
-    );
+    payment.channel.setMethodCallHandler((e) => IStoneHelper.callHandler(
+          call: e,
+          iStoneHandler: paymentHandler,
+          stoneTechHandler: iStoneTechHandler,
+          onTransaction: (model) => _checkPinpadActivated(model),
+        ));
 
     return payment;
+  }
+
+  static void _checkPinpadActivated(StoneTransactionModel model) {
+    if (model.method?.toLowerCase() == 'active') {
+      if (model.message!.toLowerCase().contains('terminal ativado')) {
+        _isPinpadActivated = true;
+        log('Pinpad activated');
+        return;
+      }
+    }
   }
 
   Future<bool> _checkLicence() async {
@@ -104,6 +117,7 @@ class Payment {
         call: e,
         iStoneHandler: paymentHandler,
         stoneTechHandler: null,
+        onTransaction: (model) => _checkPinpadActivated(model),
       ),
     );
   }
@@ -121,7 +135,10 @@ class Payment {
 
   /// Create external functions from invoke methodChannel
   /// Function to active pinpad with SDK the Stone
-  Future<bool> activePinpad({required String appName, required String stoneCode}) async {
+  Future<bool> activePinpad({
+    required String appName,
+    required String stoneCode,
+  }) async {
     _ensureLicence();
     try {
       await channel.invokeMethod(PaymentTypeCall.activePinpad.method, {"appName": appName, "stoneCode": stoneCode});
