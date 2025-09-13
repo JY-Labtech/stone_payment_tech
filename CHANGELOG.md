@@ -1,3 +1,7 @@
+## 0.0.5
+
+- Fix page and dialog base
+
 ## 0.0.4
 
 - Add StoneStreamDialog

@@ -1,0 +1,92 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+
+android {
+    namespace = "com.example.stone_payment_tech"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    flavorDimensions += "model"
+
+    productFlavors {
+        gertecGpos700 {
+            dimension "model"
+            versionNameSuffix "-gertecGpos700"
+        }
+        positivoSeriesL {
+            dimension "model"
+            versionNameSuffix "-positivoSeriesL"
+        }
+        ingenico {
+            dimension "model"
+            versionNameSuffix "-ingenico"
+        }
+        sunmi {
+            dimension "model"
+            versionNameSuffix "-sunmi"
+        }
+        tectoySeriesT {
+            dimension "model"
+            versionNameSuffix "-tectoySeriesT"
+        }
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "com.example.stone_payment_tech"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdk = 22
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+        ndk.abiFilters = ['armeabi-v7a', 'arm64-v8a']
+    }
+
+    signingConfigs {
+        positivo {
+            keyAlias keystoreProperties['positivoAlias']
+            keyPassword keystoreProperties['positivoPassword']
+            storeFile keystoreProperties['positivoFile'] ? file(keystoreProperties['positivoFile']) : null
+            storePassword keystoreProperties['positivoStorePassword']
+        }
+    }
+
+     buildTypes {
+        debug{
+            signingConfig signingConfigs.positivo
+        }
+        profile{
+            signingConfig signingConfigs.positivo
+        }
+        release {
+            shrinkResources false
+            minifyEnabled false
+            signingConfig signingConfigs.positivo
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}

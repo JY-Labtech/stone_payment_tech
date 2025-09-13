@@ -18,6 +18,10 @@ class StoneStreamHandler extends IStoneHandler {
     lastStatus = null;
   }
 
+  void streamDispose() {
+    _controller.close();
+  }
+
   void setStatus(String message) {
     if (lastStatus is StoneStatusTransaction) {
       return;

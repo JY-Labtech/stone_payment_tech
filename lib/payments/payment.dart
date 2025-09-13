@@ -10,6 +10,7 @@ import 'package:stone_payment_tech/interface/utils/extensions/payment_type_call_
 import 'package:stone_payment_tech/interface/utils/types/payment_type_call.dart';
 import 'package:stone_payment_tech/licence/constants/licence_constants.dart';
 
+import '../stone_smart_flutter.dart';
 import 'helper/istone_helper.dart';
 
 final class Payment {
@@ -21,9 +22,6 @@ final class Payment {
   // Cache da instância criada
   static Payment? _instance;
   static bool _isLicenceValidated = false;
-  static bool _isPinpadActivated = false;
-
-  bool get isPinpadActivated => _isPinpadActivated;
 
   Payment._({
     required this.channel,
@@ -76,7 +74,7 @@ final class Payment {
   static void _checkPinpadActivated(StoneTransactionModel model) {
     if (model.method?.toLowerCase() == 'active') {
       if (model.message!.toLowerCase().contains('terminal ativado')) {
-        _isPinpadActivated = true;
+        StoneTech.isPinpadActivated = true;
         log('Pinpad activated');
         return;
       }

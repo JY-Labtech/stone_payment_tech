@@ -18,7 +18,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
   @override
   void initState() {
-    StoneTech.I.initPayment(handler: controller, licenceKey: '<sua_licença_aqui>');
+    StoneTech.I.initPayment(handler: controller, licenceKey: "sua_licenca_aqui");
     super.initState();
   }
 
