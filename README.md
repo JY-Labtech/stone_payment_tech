@@ -210,6 +210,58 @@ StoneTech.I.payment.abortTransaction();
 
 > 🔖 **Obs:** o SDK imprime automaticamente a via do consumidor.
 
+### Implementação de página
+
+Abaixo segue um exemplo usando uma tela pré montada, onde você deve passar os parâmetros solicitados e a tela faz todo o fluxo de transação, e ao terminar lhe devolve um `StoneTransactionModel`.
+
+```dart
+ final result = await Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => StoneStreamPage(
+      stonePaymentParams: StonePaymentParams(
+        amount: 15,
+        type: StonePaymentType.debit,
+        credentials: StoneCredentialsModel(
+          stoneCode: 'StoneCode',
+          licenceKey: licenceKey,
+          appName: 'nome_do_seu_app',
+        ),
+      ),
+    ),
+  ),
+);
+```
+
+### Implementação usando Dialog
+
+Abaixo segue um exemplo usando um dialog pré montado, onde você deve passar os parâmetros solicitados e o dialog faz todo o fluxo de transação, e ao terminar lhe devolve um `StoneTransactionModel`.
+
+```dart
+await showDialog(
+  context: context,
+  builder: (context) {
+    return StoneStreamDialog(
+      stonePaymentParams: StonePaymentParams(
+        amount: 15,
+        type: StonePaymentType.debit,
+        credentials: StoneCredentialsModel(
+          stoneCode: 'StoneCode',
+          licenceKey: licenceKey,
+          appName: 'nome_do_seu_app',
+        ),
+      ),
+      onConfirmPayment: (transaction) {
+        print('***Response dialog: $transaction');
+      },
+    );
+  });
+```
+
+#### Style
+
+Caso queira passar um estilo diferente para o `StoneStreamDialog` ou para `StoneStreamPage`, é só passar o parâmetro `style`, sendo este a classe `StoneStreamStyle`.
+
 ---
 
 ## 📥 Callbacks implementáveis (`StoneHandler`)

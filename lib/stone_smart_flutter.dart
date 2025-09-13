@@ -11,6 +11,7 @@ class StoneTech {
   Payment? _payment;
 
   static StoneTech? _instance;
+  static bool isPinpadActivated = false;
 
   StoneTech(this._channel);
 

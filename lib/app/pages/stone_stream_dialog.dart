@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:stone_payment_tech/app/handler/stone_stream_handler.dart';
 import 'package:stone_payment_tech/app/helpers/stone_snack_helper.dart';
-import 'package:stone_payment_tech/app/model/stone_credentials.dart';
 import 'package:stone_payment_tech/app/model/stone_payment_params.dart';
 import 'package:stone_payment_tech/app/model/stone_status.dart';
 import 'package:stone_payment_tech/app/style/stone_stream_style.dart';
@@ -15,14 +15,12 @@ import '../controller/stone_stream_controller.dart';
 class StoneStreamDialog extends StatefulWidget {
   final StonePaymentParams stonePaymentParams;
   final void Function(StoneTransactionModel) onConfirmPayment;
-  final StoneCredentialsModel credentials;
   final StoneStreamStyle? style;
 
   const StoneStreamDialog({
     super.key,
     required this.stonePaymentParams,
     required this.onConfirmPayment,
-    required this.credentials,
     this.style,
   });
   @override
@@ -37,6 +35,8 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
   bool isBlockPop = false;
   final stoneController = StoneStreamController(handler: StoneStreamHandler());
   late StoneStreamStyle style;
+  late Timer _timerTransaction;
+  Timer? _timerPop;
 
   String? popMessage;
 
@@ -47,17 +47,26 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
   @override
   void initState() {
     style = widget.style ?? StoneStreamStyle();
+    _timerTransaction = Timer(const Duration(minutes: 10), () {
+      _pop();
+    });
     if (widget.stonePaymentParams.type == StonePaymentType.pix) {
       isBlockPop = true;
     }
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      stoneController.startTransaction(
-        params: widget.stonePaymentParams,
-        credentials: widget.credentials,
-      );
+      stoneController.startTransaction(params: widget.stonePaymentParams);
     });
+  }
+
+  @override
+  void dispose() {
+    stoneController.handler?.clear();
+    stoneController.handler?.streamDispose();
+    _timerTransaction.cancel();
+    _timerPop?.cancel();
+    super.dispose();
   }
 
   void setBlockPop(bool block) {
@@ -75,11 +84,7 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
       onPopInvokedWithResult: (value, __) {
         if (isBlockPop) {
           setPopMessage('Pagamento via PIX não pode ser cancelado, aguarde.');
-          StoneSnackHelper.showSnackException(
-            'Pagamento via PIX não pode ser cancelado, aguarde.',
-            Colors.red,
-            context: context,
-          );
+          StoneSnackHelper.showSnackException('Pagamento via PIX não pode ser cancelado, aguarde.', Colors.red, context: context);
           return;
         }
         return;
@@ -93,11 +98,7 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 5),
-            Icon(
-              style.icon ?? Icons.credit_card,
-              color: style.iconColor,
-              size: 45,
-            ),
+            Icon(style.icon ?? Icons.credit_card, color: style.iconColor, size: 45),
             const SizedBox(height: 10),
             StreamBuilder<StoneStatus>(
               stream: stoneController.stream,
@@ -115,29 +116,16 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                       }
                       return Column(
                         children: [
-                          Image.memory(
-                            snapshot.data!,
-                            fit: BoxFit.contain,
-                            height: 200,
-                            width: 200,
-                          ),
+                          Image.memory(snapshot.data!, fit: BoxFit.contain, height: 200, width: 200),
                           const SizedBox(height: 5),
-                          Text(
-                            'Leia o QRCode acima para concluir o pagamento',
-                            style: TextStyle(
-                              color: style.textColor,
-                            ),
-                          ),
+                          Text('Leia o QRCode acima para concluir o pagamento', style: TextStyle(color: style.textColor)),
                           Visibility(
                             visible: popMessage != null,
                             child: Padding(
                               padding: const EdgeInsets.only(top: 5),
                               child: Text(
                                 popMessage ?? '',
-                                style: TextStyle(
-                                  color: style.textAlertColor,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                                style: TextStyle(color: style.textAlertColor, fontWeight: FontWeight.w700),
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -156,7 +144,7 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                 final data = snapshot.data;
 
                 if (data case StoneStatusActivate()) {
-                  stoneController.startTransaction(params: widget.stonePaymentParams, credentials: widget.credentials);
+                  stoneController.startTransaction(params: widget.stonePaymentParams);
                 }
 
                 if (data case StoneStatusActivateRunning()) {
@@ -177,7 +165,9 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                   }
                   if (data.transaction.isAproved && !stoneController.isFinishPayment) {
                     stoneController.isFinishPayment = true;
-                    // widget.onConfirmPayment();
+                    _timerPop = Timer(const Duration(minutes: 2), () {
+                      _pop();
+                    });
 
                     return Column(
                       mainAxisSize: MainAxisSize.min,
@@ -187,25 +177,21 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                         _text('Deseja imprimir via do cliente?'),
                         const SizedBox(height: 8),
                         ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: style.buttonColor,
-                          ),
+                          style: ElevatedButton.styleFrom(backgroundColor: style.buttonColor),
                           onPressed: () async {
                             stoneController.onPrinterCustomer(true);
                             widget.onConfirmPayment(data.transaction);
+                            _pop();
                           },
                           child: Text('Sim', style: TextStyle(color: style.buttonTextColor)),
                         ),
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: () async {
-                            stoneController.onPrinterCustomer(false);
                             widget.onConfirmPayment(data.transaction);
+                            _pop();
                           },
-                          child: Text(
-                            'Não',
-                            style: TextStyle(color: style.buttonColor),
-                          ),
+                          child: Text('Não', style: TextStyle(color: style.buttonColor)),
                         ),
                       ],
                     );
@@ -235,16 +221,12 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                 final data = snapshot.data;
                 if (data case StoneStatusMessage()) {
                   return ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: style.buttonColor,
-                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: style.buttonColor),
                     child: Text("Abortar transação", style: TextStyle(color: style.buttonTextColor)),
                     onPressed: () async {
                       stoneController.abortTransaction();
                       await Future.delayed(const Duration(seconds: 1));
-                      if (mounted) {
-                        Navigator.pop(context);
-                      }
+                      _pop();
                     },
                   );
                 }
@@ -260,17 +242,28 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
 
   Future<void> _error() async {
     await Future.delayed(const Duration(seconds: 2));
-    if (mounted) Navigator.pop(context);
+    _pop();
+  }
+
+  void _pop() {
+    if (mounted) {
+      _cancellAllTimers();
+      _disposeHandler();
+
+      Navigator.pop(context);
+    }
+  }
+
+  void _disposeHandler() {
+    stoneController.handler?.clear();
+    stoneController.handler?.streamDispose();
   }
 
   Widget _text(String text) {
     return Text(
       text,
       textAlign: TextAlign.center,
-      style: TextStyle(
-        color: style.textColor,
-        fontWeight: FontWeight.w500,
-      ),
+      style: TextStyle(color: style.textColor, fontWeight: FontWeight.w500),
     );
   }
 
@@ -283,6 +276,11 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
       return null;
     }
   }
+
+  void _cancellAllTimers() {
+    _timerTransaction.cancel();
+    _timerPop?.cancel();
+  }
 }
 
 class CheckPaymentDialogItemWidget extends StatelessWidget {
@@ -290,22 +288,14 @@ class CheckPaymentDialogItemWidget extends StatelessWidget {
   final Function(bool?)? onChanged;
   final String title;
 
-  const CheckPaymentDialogItemWidget({
-    super.key,
-    this.value,
-    this.onChanged,
-    required this.title,
-  });
+  const CheckPaymentDialogItemWidget({super.key, this.value, this.onChanged, required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Checkbox(
-          value: value,
-          onChanged: onChanged,
-        ),
-        Text(title)
+        Checkbox(value: value, onChanged: onChanged),
+        Text(title),
       ],
     );
   }

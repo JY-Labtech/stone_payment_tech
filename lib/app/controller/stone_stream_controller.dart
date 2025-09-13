@@ -62,17 +62,19 @@ class StoneStreamController {
 
   Future<void> startTransaction({
     required StonePaymentParams params,
-    required StoneCredentialsModel credentials,
   }) async {
     isFinishPayment = false;
     handler?.clear();
     if (handler == null) {
       return;
     }
-    if (!stone.payment.isPinpadActivated) {
+    credentials = params.credentials;
+    if (!StoneTech.isPinpadActivated) {
       handler!.setStreamStatus(const StoneStatusActivateRunning(message: 'Ativando Terminal...'));
-      await initialize(stoneCredentials: credentials, stonePaymentParams: params);
+      await initialize(stoneCredentials: params.credentials, stonePaymentParams: params);
       return;
+    } else {
+      stone.payment.setHandler(handler!);
     }
     final amountInt = _getSaleValueStone(params.amount);
     currentMethod = params.type;
