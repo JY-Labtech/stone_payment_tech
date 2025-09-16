@@ -258,6 +258,26 @@ await showDialog(
   });
 ```
 
+### Implementação usando Tela para IMPRESSÃO
+
+```dart
+ final result = await Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => StonePrinterPage(
+      credentials: StoneCredentialsModel(
+          stoneCode: 'StoneCode',
+          licenceKey: licenceKey,
+          appName: 'nome_do_seu_app',
+        ),
+        child: <Seu widget montando seu layout para impressão>
+    ),
+  ),
+);
+```
+
+Ele vai devolver um boolean, informando se deu certo a impressão ou não.
+
 #### Style
 
 Caso queira passar um estilo diferente para o `StoneStreamDialog` ou para `StoneStreamPage`, é só passar o parâmetro `style`, sendo este a classe `StoneStreamStyle`.

@@ -1,3 +1,7 @@
+## 0.0.6
+
+- Add StonePrinterPage
+
 ## 0.0.5
 
 - Fix page and dialog base
