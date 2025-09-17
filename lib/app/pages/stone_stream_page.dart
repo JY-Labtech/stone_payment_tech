@@ -215,6 +215,10 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                                 );
                               }
 
+                              if (!data.transaction.isAproved && (data.transaction.transactionStatus != '' && data.transaction.transactionStatus != null)) {
+                                _error(data.transaction);
+                              }
+
                               if (data.transaction.messageFromAuthorize != null) {
                                 return _text(data.transaction.messageFromAuthorize!);
                               } else if (data.transaction.message != null) {
@@ -268,12 +272,12 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
     );
   }
 
-  Future<void> _error() async {
+  Future<void> _error([StoneTransactionModel? transaction]) async {
     await Future.delayed(const Duration(seconds: 2));
-    _popWithResult(null);
+    _popWithResult(transaction);
   }
 
-  void _popWithResult(StoneTransactionModel? transaction) {
+  void _popWithResult(StoneTransactionModel? transaction) async {
     _cancellAllTimers();
     _disposeHandler();
     if (mounted) {
