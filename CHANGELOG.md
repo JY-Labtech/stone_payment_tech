@@ -1,3 +1,7 @@
+## 0.0.7
+
+- Fix check payment approved
+
 ## 0.0.6
 
 - Add StonePrinterPage

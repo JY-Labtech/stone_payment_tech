@@ -197,6 +197,10 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                     );
                   }
 
+                  if (!data.transaction.isAproved && (data.transaction.transactionStatus != '' && data.transaction.transactionStatus != null)) {
+                    _popWithResult(data.transaction);
+                  }
+
                   if (data.transaction.messageFromAuthorize != null) {
                     return _text(data.transaction.messageFromAuthorize!);
                   } else if (data.transaction.message != null) {
@@ -245,12 +249,20 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
     _pop();
   }
 
-  void _pop() {
+  Future<void> _popWithResult(StoneTransactionModel? model) async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (model != null) {
+      widget.onConfirmPayment(model);
+    }
+    _pop(model);
+  }
+
+  void _pop([StoneTransactionModel? model]) {
     if (mounted) {
       _cancellAllTimers();
       _disposeHandler();
 
-      Navigator.pop(context);
+      Navigator.pop(context, model);
     }
   }
 

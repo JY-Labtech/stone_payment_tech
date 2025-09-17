@@ -12,7 +12,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final String licenceKey = "sua-licenca-aqui";
+  final String licenceKey = "sua_licenca_aqui";
 
   StonePaymentType? selectedPaymentType;
 
@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> {
                   MaterialPageRoute(
                     builder: (context) => StoneStreamPage(
                       stonePaymentParams: StonePaymentParams(
-                        amount: 15,
+                        amount: 0.55,
                         type: selectedPaymentType ?? StonePaymentType.debit,
                         credentials: StoneCredentialsModel(
                           stoneCode: '206192723',
@@ -118,7 +118,7 @@ class _HomePageState extends State<HomePage> {
                     builder: (context) {
                       return StoneStreamDialog(
                         stonePaymentParams: StonePaymentParams(
-                          amount: 15,
+                          amount: 0.51,
                           type: selectedPaymentType ?? StonePaymentType.debit,
                           credentials: StoneCredentialsModel(
                             stoneCode: '206192723',
