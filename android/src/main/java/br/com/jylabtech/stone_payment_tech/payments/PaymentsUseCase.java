@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import br.com.jylabtech.stone_payment_tech.core.ActionResult;
 import br.com.jylabtech.stone_payment_tech.core.BasicResult;
 import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
+import br.com.jylabtech.stone_payment_tech.licence.LicenceResult;
 import br.com.jylabtech.stone_payment_tech.printer.StonePrinter;
 import com.google.gson.Gson;
 
@@ -859,4 +860,37 @@ public class PaymentsUseCase {
       return null;
     }
     }
+
+
+  public boolean checkValidLicence(String licenceKey, String licenceInternalKey) throws Exception {
+    boolean aux = false;
+    BasicResult result = new BasicResult();
+    result.setMethod("licence");
+    this.mFragment.onMessage("Verificando licença");
+    LicenceResult resultLicence =  licenceTech.validateLicence(licenceKey, licenceInternalKey);
+    Log.d("print", "****resultLicence: " + resultLicence);
+
+
+    if(resultLicence.getResult() == 0) {
+      aux = true;
+      this.mFragment.onMessage("Licença ativada");
+      result.setResult(0);
+      result.setMessage("Licença ativada com sucesso");
+      this.mFragment.onFinishedResponse(convertBasicResultToJson(result));
+    }
+
+    if(!aux) {
+      String errorMessage = resultLicence.getErrorMessage();
+      if(errorMessage == null || errorMessage.isEmpty()) {
+        errorMessage = "Licença não ativada";
+      }
+      this.mFragment.onMessage(errorMessage);
+      result.setResult(999999);
+      result.setErrorMessage(errorMessage);
+      this.mFragment.onFinishedResponse(convertBasicResultToJson(result));
+      throw new Exception("Licença não ativada, consulte o suporte do plugin.");
+    }
+
+    return aux;
+  }
 }

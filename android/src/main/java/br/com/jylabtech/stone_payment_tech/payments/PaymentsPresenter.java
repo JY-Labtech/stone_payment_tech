@@ -3,12 +3,18 @@ package br.com.jylabtech.stone_payment_tech.payments;
 import android.content.Context;
 
 
+import com.google.gson.Gson;
+
 import java.util.HashMap;
 import java.util.Map;
 
+import br.com.jylabtech.stone_payment_tech.core.ActionResult;
+import br.com.jylabtech.stone_payment_tech.core.BasicResult;
+import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
 import io.flutter.plugin.common.MethodChannel;
 import io.reactivex.disposables.Disposable;
 import stone.utils.keys.StoneKeyType;
+import android.util.Log;
 
 public class PaymentsPresenter {
 
@@ -18,14 +24,17 @@ public class PaymentsPresenter {
     private Boolean hasAborted = false;
     private int countPassword = 0;
     private boolean isDebugLog = false;
+    private CheckLicenceTech licenceTech;
+    Gson gson = null;
 
     private Context context;
 
     //@Inject
     public PaymentsPresenter(MethodChannel channel, boolean isDebugLog, Context context1) {
+        this.context = context1;
         this.mUseCase = new PaymentsUseCase(channel, isDebugLog, context1);
         this.mFragment = new PaymentsFragment(channel);
-        this.context = context1;
+        this.licenceTech = new CheckLicenceTech(context1);
     }
 
     public void doTransaction(Context context,
@@ -130,6 +139,12 @@ public class PaymentsPresenter {
     public String getPosManufacture() {
         return mUseCase.getPosManufacture();
     }
+
+    public boolean checkValidLicence(String licenceKey, String licenceInternalKey) throws Exception {
+        return this.mUseCase.checkValidLicence(licenceKey, licenceInternalKey);
+    }
+
+
 
     public void dispose() {
         if (mSubscribe != null) {

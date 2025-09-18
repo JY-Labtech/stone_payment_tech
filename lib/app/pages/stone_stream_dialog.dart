@@ -175,23 +175,33 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                         _text('Transação aprovada'),
                         const SizedBox(height: 8),
                         _text('Deseja imprimir via do cliente?'),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: style.buttonColor),
-                          onPressed: () async {
-                            stoneController.onPrinterCustomer(true);
-                            widget.onConfirmPayment(data.transaction);
-                            _pop();
-                          },
-                          child: Text('Sim', style: TextStyle(color: style.buttonTextColor)),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () async {
-                            widget.onConfirmPayment(data.transaction);
-                            _pop();
-                          },
-                          child: Text('Não', style: TextStyle(color: style.buttonColor)),
+                        const SizedBox(height: 15),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: TextButton(
+                                onPressed: () async {
+                                  widget.onConfirmPayment(data.transaction);
+                                  _pop();
+                                },
+                                child: Text('Não', style: TextStyle(color: style.buttonColor)),
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: style.buttonColor),
+                              onPressed: () async {
+                                stoneController.onPrinterCustomer(true);
+                                widget.onConfirmPayment(data.transaction);
+                                _pop();
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: Text('Sim', style: TextStyle(color: style.buttonTextColor)),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     );
