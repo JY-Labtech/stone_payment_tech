@@ -19,10 +19,13 @@ public class PaymentsPresenter {
     private int countPassword = 0;
     private boolean isDebugLog = false;
 
+    private Context context;
+
     //@Inject
-    public PaymentsPresenter(MethodChannel channel, boolean isDebugLog) {
-        this.mUseCase = new PaymentsUseCase(channel, isDebugLog);
+    public PaymentsPresenter(MethodChannel channel, boolean isDebugLog, Context context1) {
+        this.mUseCase = new PaymentsUseCase(channel, isDebugLog, context1);
         this.mFragment = new PaymentsFragment(channel);
+        this.context = context1;
     }
 
     public void doTransaction(Context context,
@@ -34,7 +37,7 @@ public class PaymentsPresenter {
                               String qrCodeAuthorization,
                               String qrCodeProviderid,
                               boolean printCustomerSlip,
-                              boolean printEstablishmentSlip) {
+                              boolean printEstablishmentSlip) throws Exception {
         if(qrCodeProviderid == null && qrCodeAuthorization == null){
             mUseCase.initTransaction(context, amount, typeTransaction, initiatorTransactionKey, parc, withInterest, null, printCustomerSlip, printEstablishmentSlip);
             return;
@@ -53,7 +56,7 @@ public class PaymentsPresenter {
         mUseCase.printerCurrentTransaction(context, printCustomerSlip);
     }
 
-    public void printerFromTransactionKey(Context context, String transactionKey) {
+    public void printerFromTransactionKey(Context context, String transactionKey) throws Exception {
         mUseCase.printerFromTransactionKey(context, transactionKey);
     }
 
@@ -63,7 +66,7 @@ public class PaymentsPresenter {
 
     public void activate(String appName,
                          String stoneCode,
-                         Context context) {
+                         Context context) throws Exception {
         mFragment.onMessage("Ativando terminal");
         mUseCase.initializeAndActivatePinpad(appName, stoneCode, context);
     }
@@ -72,7 +75,7 @@ public class PaymentsPresenter {
                                         String stoneCode,
                                         String qrCodeAuthorization,
                                         String qrCodeProviderid,
-                                        Context context) {
+                                        Context context) throws Exception {
         Map<StoneKeyType, String> stoneKeys = new HashMap<StoneKeyType, String>()
         {
             {
@@ -83,7 +86,7 @@ public class PaymentsPresenter {
         mUseCase.initializeAndActivatePinPadWithCredentials(appName, stoneCode, stoneKeys, context);
 
     }
-    public void cancelTransaction(Context context, int idFromBase) {
+    public void cancelTransaction(Context context, int idFromBase) throws Exception {
         mUseCase.cancelTransaction(context, idFromBase);
     }
 
@@ -108,11 +111,11 @@ public class PaymentsPresenter {
         mUseCase.getAllTransactions(context);
     }
 
-    public void customPrinter(String params, Context context) {
+    public void customPrinter(String params, Context context) throws Exception {
         mUseCase.customPrinter(params, context);
     }
 
-    public void printFromBase64(String params, Context context) {
+    public void printFromBase64(String params, Context context) throws Exception {
         mUseCase.printFromBase64(params, context);
     }
 

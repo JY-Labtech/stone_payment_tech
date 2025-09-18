@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 
 import br.com.jylabtech.stone_payment_tech.core.ActionResult;
 import br.com.jylabtech.stone_payment_tech.core.BasicResult;
+import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
 import br.com.jylabtech.stone_payment_tech.printer.StonePrinter;
 import com.google.gson.Gson;
 
@@ -54,13 +55,29 @@ public class PaymentsUseCase {
   private boolean isDebugLog = false;
   List<TransactionObject> transactionObjects;
   private boolean isAbortRunning = false;
+
+  private Context context;
+  private CheckLicenceTech licenceTech;
   Gson gson = null;
 
-  public PaymentsUseCase(MethodChannel channel, boolean isDebugLog) {
+
+
+  public PaymentsUseCase(MethodChannel channel, boolean isDebugLog, Context context1) {
     this.mFragment = new PaymentsFragment(channel);
     this.mStonePrinter = new StonePrinter(channel);
     this.mStoneHelper = new StoneHelper();
     this.isDebugLog = isDebugLog;
+    this.context = context1;
+    this.licenceTech = new CheckLicenceTech(context1);
+  }
+
+  private boolean isValidLicence() throws Exception {
+    boolean result = licenceTech.validateExistsLicence();
+    if(result) {
+       return true;
+    }
+
+    throw new Exception("Licença inválida ou não foi inicializada!");
   }
 
   private Gson getGson() {
@@ -79,7 +96,8 @@ public class PaymentsUseCase {
                               Map<StoneKeyType, String> stoneKeys,
                               boolean printCustomerSlip,
                               boolean printEstablishmentSlip
-                              ){
+                              ) throws Exception {
+    isValidLicence();
     isAbortRunning = false;
     if(stoneKeys == null) {
       checkUserModel(context);
@@ -95,6 +113,7 @@ public class PaymentsUseCase {
   }
 
   private void checkUserModel(Context context) {
+
       isInitialized = StoneStart.INSTANCE.getSDKInitialized();
 
       if (isInitialized) {
@@ -108,6 +127,7 @@ public class PaymentsUseCase {
   }
 
   public void handleTransactionError(Context context, String message, ActionResult actionResult, BasicResult basicResult) {
+
     mFragment.onMessage(message);
     basicResult.setResult(999999);
     actionResult.setResult(999999);
@@ -207,7 +227,8 @@ public class PaymentsUseCase {
           boolean withInterest,
           boolean printCustomerSlip,
           boolean printEstablishmentSlip
-  ) {
+  ) throws Exception {
+    isValidLicence();
 
     BasicResult basicResult = new BasicResult();
     basicResult.setMethod("transaction");
@@ -323,7 +344,8 @@ public class PaymentsUseCase {
     }
   }
 
-  public void printerFromTransactionKey(Context context, String transactionKey) {
+  public void printerFromTransactionKey(Context context, String transactionKey) throws Exception {
+    isValidLicence();
     TransactionDAO transactionDAO = new TransactionDAO(context);
     Log.d("print", "*****Chegou transactionKey: " + transactionKey);
     TransactionObject transactionObject = transactionDAO.findTransactionWithInitiatorTransactionKey(transactionKey);
@@ -433,7 +455,8 @@ public class PaymentsUseCase {
           String appName,
           String stoneCode,
           Context context
-  ) {
+  ) throws Exception {
+    isValidLicence();
     try {
       BasicResult basicResult = new BasicResult();
       String serialNumber = getSerialNumber();
@@ -475,7 +498,8 @@ public class PaymentsUseCase {
           String stoneCode,
           Map<StoneKeyType, String> stoneKeys,
           Context context
-  ) {
+  ) throws Exception {
+    isValidLicence();
     try {
       BasicResult basicResult = new BasicResult();
       if(isDebugLog) {
@@ -508,7 +532,8 @@ public class PaymentsUseCase {
     }
   }
 
-  public void cancelTransaction(Context context, int idFromBase) {
+  public void cancelTransaction(Context context, int idFromBase) throws Exception {
+    isValidLicence();
     if(isDebugLog) {
       Log.d("print", "*** cancelTransaction");
     }
@@ -536,7 +561,8 @@ public class PaymentsUseCase {
     }
   }
 
-  public void cancelTransactionPIX(Context context) {
+  public void cancelTransactionPIX(Context context) throws Exception {
+    isValidLicence();
     if(isDebugLog) {
     Log.d("print", "****** cancelTransactionPIX");
     }
@@ -768,14 +794,16 @@ public class PaymentsUseCase {
     }
 
 
-    public void customPrinter(String params, Context context) {
+    public void customPrinter(String params, Context context) throws Exception {
+      isValidLicence();
       if(isDebugLog) {
       Log.d("print", "**** customPrinter");
       }
       mStonePrinter.customPrinter(params, context);
     }
 
-    public void printFromBase64(String params, Context context) {
+    public void printFromBase64(String params, Context context) throws Exception {
+      isValidLicence();
       if(isDebugLog) {
       Log.d("print", "**** printFromBase64");
       }
