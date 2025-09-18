@@ -33,15 +33,20 @@ public class StoneTechFlutterPlugin
     stoneTech = new StoneTech(context, channel);
   }
 
-  @Override
-  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-    //Function responsible for listening to methods called by flutter
-    if (call.method.startsWith("payment")) {
-      stoneTech.initPayment(call, result);
-    } else {
-      result.notImplemented();
+@Override
+public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+    try {
+        if (call.method.startsWith("payment")) {
+            stoneTech.initPayment(call, result);
+        } else {
+            result.notImplemented();
+        }
+    } catch (Exception e) {
+        // Captura qualquer Exception e envia de volta para o Flutter
+        result.error("ERROR", e.getMessage(), null);
     }
-  }
+}
+
 
   @Override
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {

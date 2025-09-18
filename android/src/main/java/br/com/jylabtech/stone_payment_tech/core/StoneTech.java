@@ -1,9 +1,15 @@
 package br.com.jylabtech.stone_payment_tech.core;
+
+import br.com.jylabtech.stone_payment_tech.BuildConfig;
 import android.content.Context;
 import android.util.Log;
+
+import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
 import br.com.jylabtech.stone_payment_tech.payments.PaymentsPresenter;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
+
+
 
 
 public class StoneTech {
@@ -15,15 +21,20 @@ public class StoneTech {
     private String TAG = "StoneTech";
     private boolean isDebugLogActive = false;
 
+    private CheckLicenceTech licenceTech;
+
+    private String licenceKey;
+
 
     public StoneTech(Context context, MethodChannel channel) {
         this.currentContext = context;
         this.mChannel = channel;
+        this.licenceTech = new CheckLicenceTech(context);
     }
 
-    public void initPayment(MethodCall call, MethodChannel.Result result) {
+    public void initPayment(MethodCall call, MethodChannel.Result result) throws Exception {
         if (this.payment == null) {
-            this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive);
+            this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive, this.currentContext);
         }
 
         Log.i(TAG, "Call Method: " + call.method);
@@ -33,11 +44,29 @@ public class StoneTech {
             return;
         }
 
+        String licenceKeyLocal = BuildConfig.LICENCE_KEY;
+        String licenceInternalKey = BuildConfig.LICENCE_INTERNAL_KEY;
+
+        Log.i(TAG, "**Licença local: " + licenceKeyLocal);
+        this.licenceKey = licenceKeyLocal;
+
+
+
+        if(licenceKey == null) {
+             throw new Exception("Sua chave de licença não foi encontrada.");
+        }else {
+            boolean resultLicence = checkLicence(licenceKeyLocal, licenceInternalKey);
+            Log.i(TAG, "*resultLicence: " + resultLicence);
+            if(!resultLicence) {
+                throw new Exception("Sua licença não foi ativada.");
+            }
+        }
+
         switch (paymentMethod) {
             case PAYMENT_ACTIVE_DEBUG_LOG:
                 boolean isDebugLogParams = call.argument("isDebugLog");
                 isDebugLogActive = isDebugLogParams;
-                this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive);
+                this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive, this.currentContext);
                 break;
             case PAYMENT_GET_SERIAL_NUMBER:
                 String serialNumber = this.payment.getPosSerialNumber();
@@ -159,5 +188,9 @@ public class StoneTech {
         if (this.payment != null) {
             this.payment.dispose();
         }
+    }
+
+    private boolean checkLicence(String key, String url) {
+        return licenceTech.validateLicence(key, url);
     }
 }
