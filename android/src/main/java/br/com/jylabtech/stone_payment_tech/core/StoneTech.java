@@ -21,7 +21,6 @@ public class StoneTech {
     private String TAG = "StoneTech";
     private boolean isDebugLogActive = false;
 
-    private CheckLicenceTech licenceTech;
 
     private String licenceKey;
 
@@ -29,7 +28,6 @@ public class StoneTech {
     public StoneTech(Context context, MethodChannel channel) {
         this.currentContext = context;
         this.mChannel = channel;
-        this.licenceTech = new CheckLicenceTech(context);
     }
 
     public void initPayment(MethodCall call, MethodChannel.Result result) throws Exception {
@@ -51,15 +49,10 @@ public class StoneTech {
         this.licenceKey = licenceKeyLocal;
 
 
-
-        if(licenceKey == null) {
-             throw new Exception("Sua chave de licença não foi encontrada.");
-        }else {
-            boolean resultLicence = checkLicence(licenceKeyLocal, licenceInternalKey);
-            Log.i(TAG, "*resultLicence: " + resultLicence);
-            if(!resultLicence) {
-                throw new Exception("Sua licença não foi ativada.");
-            }
+        boolean resultLicence = this.payment.checkValidLicence(licenceKeyLocal, licenceInternalKey);
+        Log.i(TAG, "*resultLicence: " + resultLicence);
+        if(!resultLicence) {
+            throw new Exception("Sua licença não foi ativada.");
         }
 
         switch (paymentMethod) {
@@ -188,9 +181,5 @@ public class StoneTech {
         if (this.payment != null) {
             this.payment.dispose();
         }
-    }
-
-    private boolean checkLicence(String key, String url) {
-        return licenceTech.validateLicence(key, url);
     }
 }

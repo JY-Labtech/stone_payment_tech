@@ -1,4 +1,3 @@
-import 'package:check_licence_tech/check_licence_tech.dart';
 import 'package:flutter/services.dart';
 import 'package:stone_payment_tech/interface/handler/istone_handler.dart';
 import 'package:stone_payment_tech/interface/handler/istone_smart_handler.dart';
@@ -20,17 +19,10 @@ class StoneTech {
     return _instance!;
   }
 
-  final _check = CheckLicenceTech.instance();
-
-  Future<String> getSerialNumber() async => await _check.getSerialNumber();
-
-  Future<bool> wipeLicenceLocalDatabase() async => await _check.wipeLicence();
-
   /// Function to initialize payment and register the notification handler
   Future<Payment?> initPayment({
     required IStoneHandler handler,
     IStoneTechHandler? iStoneTechHandler,
-    required String licenceKey,
   }) async {
     if (_payment != null) {
       return _payment!;
@@ -39,7 +31,6 @@ class StoneTech {
       channel: _channel,
       paymentHandler: handler,
       iStoneTechHandler: iStoneTechHandler,
-      licenceKey: licenceKey,
     );
     return _payment;
   }

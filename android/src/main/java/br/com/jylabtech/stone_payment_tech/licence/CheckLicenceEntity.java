@@ -30,6 +30,16 @@ public class CheckLicenceEntity {
     private Date savedLocalDatabaseAt;
     private String databaseVersion;
 
+    private String licenceInternalKey;
+
+    public void setLicenceInternalKey(String licenceInternalKey) {
+        this.licenceInternalKey = licenceInternalKey;
+    }
+
+    public String getLicenceInternalKey() {
+        return licenceInternalKey;
+    }
+
     // Construtor padrão
     public CheckLicenceEntity() {}
 
@@ -129,6 +139,7 @@ public class CheckLicenceEntity {
             entity.setSubscriptionId(json.optString("subscriptionId"));
             entity.setCheckoutType(json.optString("checkoutType"));
             entity.setDatabaseVersion(json.optString("databaseVersion"));
+            entity.setLicenceInternalKey(json.optString("licenceInternalKey"));
 
             String expiredAtStr = json.optString("expiredAt");
             if (!expiredAtStr.isEmpty()) entity.setExpiredAt(sdf.parse(expiredAtStr));
@@ -141,6 +152,8 @@ public class CheckLicenceEntity {
 
             String savedLocalStr = json.optString("savedLocalDatabaseAt");
             if (!savedLocalStr.isEmpty()) entity.setSavedLocalDatabaseAt(sdf.parse(savedLocalStr));
+
+
 
             return entity;
         } catch (Exception e) {
@@ -172,6 +185,7 @@ public class CheckLicenceEntity {
             json.put("subscriptionId", subscriptionId);
             json.put("checkoutType", checkoutType);
             json.put("databaseVersion", databaseVersion);
+            json.put("licenceInternalKey", licenceInternalKey);
 
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
             if (expiredAt != null) json.put("expiredAt", sdf.format(expiredAt));

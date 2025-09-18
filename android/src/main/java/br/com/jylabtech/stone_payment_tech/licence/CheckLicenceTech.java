@@ -32,29 +32,39 @@ public class CheckLicenceTech {
     /**
      * Valida a licença chamando a API e salva localmente se sucesso.
      */
-    public boolean validateLicence(String licenceKey, String licenceUrl) {
-        boolean aux = false;
+    public LicenceResult validateLicence(String licenceKey, String licenceInternalKey) {
+        LicenceResult licenceResult = new LicenceResult();
+        licenceResult.setMethod("licence");
         try {
-            boolean licenceDatabase = validateLicenceDatabase(licenceKey);
+            boolean licenceDatabase = validateLicenceDatabase(licenceKey, licenceInternalKey);
             if(licenceDatabase) {
-                return licenceDatabase;
+                licenceResult.setResult(0);
+                return licenceResult;
             }
 
-            String apiUrl = sanitizeUrl(licenceUrl);
+            String apiUrl = sanitizeUrl(licenceInternalKey);
             // Chama o provider que já pega deviceId, serialNumber e uuid internamente
-            CheckLicenceEntity licence = licenceProvider.checkLicence(apiUrl, licenceKey);
-            if (licence != null) {
-                boolean isValidLicence = validateLicenceServer(licence);
+            LicenceResult licence = licenceProvider.checkLicence(apiUrl, licenceKey);
+            if (licence != null && licence.getResult() == 0) {
+                boolean isValidLicence = validateLicenceServer(licence.getLicenceEntity());
                 if(isValidLicence) {
-                    saveLicenceEncrypted(licence);
-                    aux = true;
+                    CheckLicenceEntity entity = licence.getLicenceEntity();
+                    entity.setLicenceInternalKey(licenceInternalKey);
+                    saveLicenceEncrypted(entity);
+                    licenceResult.setResult(0);
+                    licenceResult.setLicenceEntity(entity);
                 }
+            } else {
+                return licence;
             }
-            return aux;
+
+            return licenceResult;
         } catch (Exception e) {
+            licenceResult.setResult(999999);
+            licenceResult.setErrorMessage(e.getMessage());
             e.printStackTrace();
         }
-        return aux;
+        return licenceResult;
     }
 
     public boolean validateExistsLicence() {
@@ -100,7 +110,7 @@ public class CheckLicenceTech {
         return aux;
     }
 
-    private boolean validateLicenceDatabase(String licenceKey) {
+    private boolean validateLicenceDatabase(String licenceKey, String licenceInternalKey) {
         boolean aux = false;
         Date now = new Date();
 
@@ -123,6 +133,11 @@ public class CheckLicenceTech {
                 }
 
                 if(!Objects.equals(licenceDatabase.getLicenceEncrypt(), licenceKey)) {
+                    aux = false;
+                }
+
+                if(!Objects.equals(licenceDatabase.getLicenceInternalKey(), licenceInternalKey)) {
+                    deleteLicenceDatabase();
                     aux = false;
                 }
             }

@@ -44,10 +44,11 @@ Cada licença é válida por terminal. Após a compra, será gerada uma chave `l
 
 ### Inicialização com licença
 
+##### Obervação: A partir da versão 1.0.0 não é mais necessário passar o `licenceKey` como parâmetro.
+
 ```dart
 await StonePaymentTech.initPayment(
   handler: controller,
-  licenceKey: 'SUA_CHAVE',
 );
 ```
 
@@ -224,7 +225,6 @@ Abaixo segue um exemplo usando uma tela pré montada, onde você deve passar os 
         type: StonePaymentType.debit,
         credentials: StoneCredentialsModel(
           stoneCode: 'StoneCode',
-          licenceKey: licenceKey,
           appName: 'nome_do_seu_app',
         ),
       ),
@@ -247,7 +247,6 @@ await showDialog(
         type: StonePaymentType.debit,
         credentials: StoneCredentialsModel(
           stoneCode: 'StoneCode',
-          licenceKey: licenceKey,
           appName: 'nome_do_seu_app',
         ),
       ),
@@ -267,7 +266,6 @@ await showDialog(
     builder: (context) => StonePrinterPage(
       credentials: StoneCredentialsModel(
           stoneCode: 'StoneCode',
-          licenceKey: licenceKey,
           appName: 'nome_do_seu_app',
         ),
         child: <Seu widget montando seu layout para impressão>
@@ -354,6 +352,8 @@ A resposta **mais completa** da SDK Stone virá sempre no método `onFinishedRes
 ```dart
 void onFinishedResponseMonitor(StoneTransaction? stoneTransaction) {
   switch (stoneTransaction?.method) {
+    case 'licence':
+    //se result vier == 0, licença ativada, do contrário o objeto "errorMessage" irá trazer a descrição do erro.
     case 'active':
       // Terminal ativado
       break;
