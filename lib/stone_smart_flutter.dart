@@ -20,19 +20,19 @@ class StoneTech {
   }
 
   /// Function to initialize payment and register the notification handler
-  Future<Payment?> initPayment({
+  Payment initPayment({
     required IStoneHandler handler,
     IStoneTechHandler? iStoneTechHandler,
-  }) async {
+  }) {
     if (_payment != null) {
       return _payment!;
     }
-    _payment = await Payment.create(
+    _payment = Payment.create(
       channel: _channel,
       paymentHandler: handler,
       iStoneTechHandler: iStoneTechHandler,
     );
-    return _payment;
+    return _payment!;
   }
 
   /// Get the Payment object. Note: It needs to be initialized.

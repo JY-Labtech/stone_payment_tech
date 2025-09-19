@@ -348,7 +348,6 @@ public class PaymentsUseCase {
   public void printerFromTransactionKey(Context context, String transactionKey) throws Exception {
     isValidLicence();
     TransactionDAO transactionDAO = new TransactionDAO(context);
-    Log.d("print", "*****Chegou transactionKey: " + transactionKey);
     TransactionObject transactionObject = transactionDAO.findTransactionWithInitiatorTransactionKey(transactionKey);
     if(transactionObject == null) return;
     try {
@@ -569,7 +568,6 @@ public class PaymentsUseCase {
     }
     BasicResult basicResult = new BasicResult();
     basicResult.setMethod("abortPix");
-    // Log.d("print", "****************************************************************** ABORT PIX 1 ******************************************************************");
     if (posTransactionProvider != null) {
         posTransactionProvider.abortPayment();
         isAbortRunning = true;
@@ -821,7 +819,6 @@ public class PaymentsUseCase {
     public String getSerialNumber() {
     try {
       String result =  Stone.getPosAndroidDevice().getPosAndroidSerialNumber();
-      Log.d("print", "**** getSerialNumberNativo: " + result);
       if ("Mobile".equals(result)) {
         return getSerialNumberAndroid();
       }
@@ -868,7 +865,6 @@ public class PaymentsUseCase {
     result.setMethod("licence");
     this.mFragment.onMessage("Verificando licença");
     LicenceResult resultLicence =  licenceTech.validateLicence(licenceKey, licenceInternalKey);
-    Log.d("print", "****resultLicence: " + resultLicence);
 
 
     if(resultLicence.getResult() == 0) {
