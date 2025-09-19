@@ -52,6 +52,13 @@ await StonePaymentTech.initPayment(
 );
 ```
 
+A partir da versão 1.0.0 é necessário adicionar as chaves no seu arquivo `local.properties` na raiz da pasta `android`.
+
+```
+licenceKey=<sua_licenca>
+licenceInternalKey=***REMOVIDO***
+```
+
 ### ✅ Máquinas compatíveis
 
 - Positivo L300

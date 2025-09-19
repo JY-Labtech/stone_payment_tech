@@ -80,7 +80,6 @@ public class LicenceProvider {
                     os.close();
 
                     int responseCode = connection.getResponseCode();
-                    Log.d("print", "*responseCode: " + responseCode);
                     BufferedReader reader;
 
                     if (responseCode == HttpURLConnection.HTTP_OK) {
@@ -92,7 +91,6 @@ public class LicenceProvider {
                         }
                         reader.close();
 
-                        Log.d("print", "*responseStr: " + responseStr.toString());
                         licenceResult.setResult(0);
                         licenceResult.setLicenceEntity(CheckLicenceEntity.fromJson(responseStr.toString()));
 
@@ -125,7 +123,6 @@ public class LicenceProvider {
     private String handleErrors(HttpURLConnection connection) throws Exception {
         String errorMessage = "Erro interno";
         int statusCode = connection.getResponseCode();
-        Log.d("print", "*statusCode: " + statusCode);
         BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
         StringBuilder responseStr = new StringBuilder();
         String line;
@@ -139,7 +136,6 @@ public class LicenceProvider {
             JSONObject json = new JSONObject(responseStr.toString());
             message = json.optString("message", null);
             errorMessage = message;
-            Log.d("print", "*messageError: " + message);
         } catch (JSONException e) {
             errorMessage = e.getMessage();
             Log.d("print", "*ExceptionMessageError: " + e.getMessage());

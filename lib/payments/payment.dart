@@ -25,11 +25,11 @@ final class Payment {
   });
 
   /// Método factory assíncrono para criação controlada e validação da licença
-  static Future<Payment> create({
+  static Payment create({
     required MethodChannel channel,
     required IStoneHandler paymentHandler,
     IStoneTechHandler? iStoneTechHandler,
-  }) async {
+  }) {
     // Se já existe instância e licença validada, retorna ela diretamente
     if (_instance != null) {
       return _instance!;
