@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:stone_payment_tech/app/model/stone_credentials.dart';
 import 'package:stone_payment_tech/app/model/stone_payment_params.dart';
@@ -12,8 +14,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final String licenceKey = "sua_licenca_aqui";
-
   StonePaymentType? selectedPaymentType;
 
   void onChanged(StonePaymentType? value) {
@@ -84,7 +84,6 @@ class _HomePageState extends State<HomePage> {
                         type: selectedPaymentType ?? StonePaymentType.debit,
                         credentials: StoneCredentialsModel(
                           stoneCode: '***REMOVIDO***',
-                          licenceKey: licenceKey,
                           appName: 'Stone Payment Tech',
                         ),
                       ),
@@ -92,7 +91,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
 
-                print('**Result_navigation: $result');
+                log('**Result_navigation: $result');
               },
               child: const Text(
                 'Tela de pagamento',
@@ -118,18 +117,17 @@ class _HomePageState extends State<HomePage> {
                     builder: (context) {
                       return StoneStreamDialog(
                         stonePaymentParams: StonePaymentParams(
-                          amount: 0.51,
+                          amount: 12,
                           type: selectedPaymentType ?? StonePaymentType.debit,
                           credentials: StoneCredentialsModel(
                             stoneCode: '***REMOVIDO***',
-                            licenceKey: licenceKey,
                             qrCodeAuthorization: '',
                             qrCodeProviderid: '',
                             appName: 'Stone Payment Tech',
                           ),
                         ),
                         onConfirmPayment: (transaction) {
-                          print('***Response dialog: $transaction');
+                          log('***Response dialog: $transaction');
                         },
                       );
                     });

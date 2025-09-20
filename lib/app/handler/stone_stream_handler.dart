@@ -83,10 +83,16 @@ class StoneStreamHandler extends IStoneHandler {
     try {
       if (message.contains('{')) {
         final map = json.decode(message);
-        log('setStoneTransaction: $map');
-        log('***METHOD: ${map['method']}');
 
         switch (map['method']) {
+          case 'licence':
+            final errorMessage = (map['errorMessage'] ?? 'Licença não ativada').toString();
+            final resultLicence = int.tryParse((map['result'] ?? '').toString()) ?? 999999;
+            if (resultLicence != 0) {
+              lastStatus = StoneStatusActivateError(message: errorMessage);
+              _emit(lastStatus!);
+            }
+
           case 'active':
             final message = (map['message'] ?? '').toString().toLowerCase();
             if (message.contains('terminal ativado')) {

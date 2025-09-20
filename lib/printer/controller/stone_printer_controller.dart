@@ -19,7 +19,6 @@ class StonePrinterController {
 
     await stone.initPayment(
       handler: handler,
-      licenceKey: credentials.licenceKey,
     );
 
     if (credentials.qrCodeAuthorization != null && credentials.qrCodeProviderid != null) {
