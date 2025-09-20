@@ -196,7 +196,10 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                                               stoneController.onPrinterCustomer(true);
                                               _popWithResult(data.transaction);
                                             },
-                                            child: Text('Sim', style: TextStyle(color: style.buttonTextColor)),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                                              child: Text('Sim', style: TextStyle(color: style.buttonTextColor)),
+                                            ),
                                           ),
                                         ),
                                         Expanded(
@@ -206,7 +209,10 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                                               _cancellAllTimers();
                                               _popWithResult(data.transaction);
                                             },
-                                            child: Text('Não', style: TextStyle(color: style.buttonTextColor)),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                                              child: Text('Não', style: TextStyle(color: style.buttonTextColor)),
+                                            ),
                                           ),
                                         ),
                                       ],

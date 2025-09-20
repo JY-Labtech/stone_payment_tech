@@ -25,9 +25,6 @@ class StonePrinterParams {
 
   @override
   String toString() => 'StonePrinterParams(printers: $printers)';
-
-  @override
-  int get hashCode => printers.hashCode;
 }
 
 class StonePrinter {

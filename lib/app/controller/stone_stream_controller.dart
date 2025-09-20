@@ -33,7 +33,6 @@ class StoneStreamController {
 
     await stone.initPayment(
       handler: handler!,
-      licenceKey: credentials.licenceKey,
     );
     isFinishPayment = false;
 
