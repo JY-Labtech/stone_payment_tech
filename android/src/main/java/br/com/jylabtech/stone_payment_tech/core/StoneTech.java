@@ -14,16 +14,11 @@ import io.flutter.plugin.common.MethodChannel;
 
 public class StoneTech {
     final MethodChannel mChannel;
-
     PaymentsPresenter payment;
-
     final Context currentContext;
     private String TAG = "StoneTech";
     private boolean isDebugLogActive = false;
-
-
     private String licenceKey;
-
 
     public StoneTech(Context context, MethodChannel channel) {
         this.currentContext = context;

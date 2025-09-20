@@ -10,7 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  #check_licence_tech: ^0.1.2
 
 dev_dependencies:
   flutter_test:
