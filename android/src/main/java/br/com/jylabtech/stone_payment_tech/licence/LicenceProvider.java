@@ -68,11 +68,11 @@ public class LicenceProvider {
                     connection.setDoOutput(true);
 
                     JSONObject body = new JSONObject();
-//                    body.put("deviceId", deviceId);
-//                    body.put("deviceUid", deviceUid);
-//                    body.put("deviceLocalId", deviceLocalId);
-//                    body.put("deviceName", deviceName);
-                    body.put("serialNumber", deviceUid);
+                   body.put("deviceId", deviceId);
+                   body.put("deviceUid", deviceUid);
+                   body.put("deviceLocalId", deviceLocalId);
+                   body.put("deviceName", deviceName);
+                    // body.put("serialNumber", deviceUid);
 
                     OutputStream os = connection.getOutputStream();
                     os.write(body.toString().getBytes("UTF-8"));
