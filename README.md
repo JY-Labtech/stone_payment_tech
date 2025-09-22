@@ -34,7 +34,7 @@ O `stone_payment_tech` é um plugin Flutter para integração direta com o SDK S
 
 O gradle.wrapper.properties utilizado está na versão 8.9
 kotlin_version = '1.9.0'
-stone_sdk_version = '4.11.5'
+stone_sdk_version = '4.12.0'
 classpath 'com.android.tools.build:gradle:8.7.3'
 
 ## 🔐 Licenciamento
@@ -73,7 +73,7 @@ licenceInternalKey=aHR0cHM6Ly9wb3MtcGF5bWVudHMtYXBpLTU3NzQ2NDIzNTQwOC5zb3V0aGFtZ
 ## 🚀 Tecnologias
 
 - [Flutter](https://flutter.dev/)
-- SDK Stone `v4.11.5`
+- SDK Stone `4.12.0`
 - Comunicação via Platform Channels
 
 ---
