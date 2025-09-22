@@ -1,3 +1,7 @@
+## 1.1.0
+
+- Update Stone SDK to 4.12.0
+
 ## 🔥 1.0.0+1 – Breaking Change
 
 ⚠️ Attention: In this version, there is an important change in the way payments are initialized.
