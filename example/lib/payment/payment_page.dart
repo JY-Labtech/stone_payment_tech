@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:stone_payment_tech/stone_smart_flutter.dart';
+import 'package:stone_payment_tech/stone_tech_payment.dart';
 
 import 'payment_controller.dart';
 

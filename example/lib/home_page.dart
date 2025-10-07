@@ -1,10 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:stone_payment_tech/app/model/stone_credentials.dart';
-import 'package:stone_payment_tech/app/model/stone_payment_params.dart';
-import 'package:stone_payment_tech/app/pages/stone_stream_dialog.dart';
-import 'package:stone_payment_tech/app/pages/stone_stream_page.dart';
+import 'package:stone_payment_tech/stone_tech_payment.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
