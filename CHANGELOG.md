@@ -1,3 +1,7 @@
+## 1.1.1
+
+- Create class StoneCustomPrinterController
+
 ## 1.1.0
 
 - Update Stone SDK to 4.12.0
