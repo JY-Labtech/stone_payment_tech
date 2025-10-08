@@ -1,3 +1,7 @@
+## 1.1.2
+
+- Fix class StoneCustomPrinterController
+
 ## 1.1.1
 
 - Create class StoneCustomPrinterController
