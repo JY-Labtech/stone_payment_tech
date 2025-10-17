@@ -86,13 +86,19 @@ class StoneStreamHandler extends IStoneHandler {
 
         switch (map['method']) {
           case 'licence':
-            final errorMessage = (map['errorMessage'] ?? 'Licença não ativada').toString();
+            String errorMessage = (map['errorMessage'] ?? '').toString();
+            final messageFlow = map['message'] as String? ?? '';
+            lastStatus = StoneStatusActivateRunning(message: messageFlow);
             final resultLicence = int.tryParse((map['result'] ?? '').toString()) ?? 999999;
-            if (resultLicence != 0) {
+
+            if (resultLicence != 0 || errorMessage.toLowerCase().contains('erro')) {
+              if (errorMessage.isEmpty) {
+                errorMessage = 'Erro ao validar a licença';
+              }
               lastStatus = StoneStatusActivateError(message: errorMessage);
-              _emit(lastStatus!);
             }
 
+            _emit(lastStatus!);
           case 'active':
             final message = (map['message'] ?? '').toString().toLowerCase();
             if (message.contains('terminal ativado')) {

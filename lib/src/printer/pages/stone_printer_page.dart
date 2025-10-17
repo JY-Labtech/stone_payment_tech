@@ -84,7 +84,12 @@ class _StonePrinterPageState extends State<StonePrinterPage> with SingleTickerPr
           children: [
             SingleChildScrollView(
               child: Column(
-                children: [PrinterCustomBody(globalKey: globalKeyPrinter, child: widget.params.child)],
+                children: [
+                  PrinterCustomBody(
+                    globalKey: globalKeyPrinter,
+                    child: widget.params.child,
+                  )
+                ],
               ),
             ),
             PrinterLoadingWidget(

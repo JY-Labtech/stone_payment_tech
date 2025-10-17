@@ -22,10 +22,7 @@ class _HomePageState extends State<HomePage> {
 
   void printerBase64() {
     StoneCustomPrinterController().initializeAndPrintBase64(
-      stoneCredentials: StoneCredentialsModel(
-        stoneCode: '206192723',
-        appName: 'Stone Payment Tech',
-      ),
+      stoneCredentials: StoneCredentialsModel(stoneCode: '206192723', appName: 'Stone Payment Tech'),
       onMessage: (message) {
         log('onMessage: $message');
       },
@@ -41,9 +38,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stone Payment Tech'),
-      ),
+      appBar: AppBar(title: const Text('Stone Payment Tech')),
       body: Container(
         height: size.height,
         width: size.width,
@@ -56,37 +51,19 @@ class _HomePageState extends State<HomePage> {
               hint: const Text('Selecione o tipo de pagamento'),
               value: selectedPaymentType,
               items: [
-                DropdownMenuItem(
-                  value: StonePaymentType.debit,
-                  child: Text(StonePaymentType.debit.name),
-                ),
-                DropdownMenuItem(
-                  value: StonePaymentType.credit,
-                  child: Text(StonePaymentType.credit.name),
-                ),
-                DropdownMenuItem(
-                  value: StonePaymentType.pix,
-                  child: Text(StonePaymentType.pix.name),
-                ),
-                DropdownMenuItem(
-                  value: StonePaymentType.voucher,
-                  child: Text(StonePaymentType.voucher.name),
-                ),
+                DropdownMenuItem(value: StonePaymentType.debit, child: Text(StonePaymentType.debit.name)),
+                DropdownMenuItem(value: StonePaymentType.credit, child: Text(StonePaymentType.credit.name)),
+                DropdownMenuItem(value: StonePaymentType.pix, child: Text(StonePaymentType.pix.name)),
+                DropdownMenuItem(value: StonePaymentType.voucher, child: Text(StonePaymentType.voucher.name)),
               ],
               onChanged: onChanged,
             ),
             const SizedBox(height: 30),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
               onPressed: () async {
                 if (selectedPaymentType == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Selecione o tipo de pagamento'),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecione o tipo de pagamento')));
                   return;
                 }
                 final result = await Navigator.push(
@@ -96,10 +73,7 @@ class _HomePageState extends State<HomePage> {
                       stonePaymentParams: StonePaymentParams(
                         amount: 0.55,
                         type: selectedPaymentType ?? StonePaymentType.debit,
-                        credentials: StoneCredentialsModel(
-                          stoneCode: '206192723',
-                          appName: 'Stone Payment Tech',
-                        ),
+                        credentials: StoneCredentialsModel(stoneCode: '206192723', appName: 'Stone Payment Tech'),
                       ),
                     ),
                   ),
@@ -107,62 +81,41 @@ class _HomePageState extends State<HomePage> {
 
                 log('**Result_navigation: $result');
               },
-              child: const Text(
-                'Tela de pagamento',
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text('Tela de pagamento', style: TextStyle(color: Colors.white)),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
               onPressed: () async {
                 if (selectedPaymentType == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Selecione o tipo de pagamento'),
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecione o tipo de pagamento')));
                   return;
                 }
                 await showDialog(
-                    context: context,
-                    builder: (context) {
-                      return StoneStreamDialog(
-                        stonePaymentParams: StonePaymentParams(
-                          amount: 12,
-                          type: selectedPaymentType ?? StonePaymentType.debit,
-                          credentials: StoneCredentialsModel(
-                            stoneCode: '206192723',
-                            qrCodeAuthorization: '',
-                            qrCodeProviderid: '',
-                            appName: 'Stone Payment Tech',
-                          ),
-                        ),
-                        onConfirmPayment: (transaction) {
-                          log('***Response dialog: $transaction');
-                        },
-                      );
-                    });
+                  context: context,
+                  builder: (context) {
+                    return StoneStreamDialog(
+                      stonePaymentParams: StonePaymentParams(
+                        amount: 12,
+                        type: selectedPaymentType ?? StonePaymentType.debit,
+                        credentials: StoneCredentialsModel(stoneCode: '206192723', qrCodeAuthorization: '', qrCodeProviderid: '', appName: 'Stone Payment Tech'),
+                      ),
+                      onConfirmPayment: (transaction) {
+                        log('***Response dialog: $transaction');
+                      },
+                    );
+                  },
+                );
               },
-              child: const Text(
-                'Dialog de pagamento',
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text('Dialog de pagamento', style: TextStyle(color: Colors.white)),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
               onPressed: () async {
                 printerBase64();
               },
-              child: const Text(
-                'Imprimir via base64',
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text('Imprimir via base64', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

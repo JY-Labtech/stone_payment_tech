@@ -1,3 +1,9 @@
+## 2.0.0
+
+- Update Stone SDK to 4.13.0
+- Gradle 8.12+
+- Kotlin 2.1.21
+
 ## 1.1.2
 
 - Fix class StoneCustomPrinterController

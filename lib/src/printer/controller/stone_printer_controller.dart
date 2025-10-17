@@ -52,7 +52,6 @@ class StonePrinterController {
   }) {
     handler.statusStream.listen((data) {
       if (data is StoneStatusActivate) {
-        // stoneController.startTransaction(params: widget.stonePaymentParams);
         // Terminal ativado - Prosseguir com impressão
         StoneTech.isPinpadActivated = true;
         onSuccess();
@@ -69,6 +68,10 @@ class StonePrinterController {
 
       if (data is StoneStatusMessage) {
         onMessage(data.message);
+
+        if (data.message.toLowerCase().contains('erro')) {
+          onPop(false);
+        }
       }
     });
   }
