@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="#sobre">Sobre</a> •
+  <a href="#requisitos">Requisitos e Configurações</a> •
   <a href="#tecnologias">Tecnologias</a> •
   <a href="#instalacao">Instalação</a> •
   <a href="#flavors">Configuração de Flavors</a> •
@@ -26,16 +27,108 @@
 
 ---
 
-## 🎯 Sobre
+## 🎯 <a name="sobre">Sobre</a>
 
 O `stone_payment_tech` é um plugin Flutter para integração direta com o SDK Stone, permitindo a realização de transações em maquininhas smart Android.
 
-## Gradle
+## 📋 <a name="requisitos">Requisitos e Configurações</a>
 
-O gradle.wrapper.properties utilizado está na versão 8.9
-kotlin_version = '1.9.0'
-stone_sdk_version = '4.12.0'
-classpath 'com.android.tools.build:gradle:8.7.3'
+Para utilizar este plugin corretamente, seu projeto precisa atender aos seguintes requisitos:
+
+### Versões do Gradle e Dependências
+
+| Componente            | Versão Mínima | Recomendada |
+| --------------------- | ------------- | ----------- |
+| Gradle Wrapper        | 8.12          | 8.12+       |
+| Kotlin                | 2.1.21        | 2.1.21+     |
+| Android Gradle Plugin | 8.12.1        | 8.12.1+     |
+| Stone SDK             | 4.13.0        | 4.13.0      |
+| Java (compilação)     | 11            | 11+         |
+
+### Configuração do Android SDK
+
+No arquivo `android/app/build.gradle` do seu projeto:
+
+```gradle
+android {
+    compileSdk = 35  // Obrigatório: versão 35 ou superior
+
+    defaultConfig {
+        minSdk = 23        // Mínimo exigido pelo SDK Stone
+        targetSdk = 35     // Recomendado: 35 ou superior
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+}
+```
+
+### Gradle Wrapper Properties
+
+No arquivo `android/gradle/wrapper/gradle-wrapper.properties`:
+
+```properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.12-all.zip
+```
+
+### Build.gradle do Projeto
+
+No arquivo `android/build.gradle` (nível de projeto):
+
+```gradle
+buildscript {
+    ext.kotlin_version = '2.1.21'
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.12.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+```
+
+### Arquivo local.properties
+
+Na raiz da pasta `android/`, crie ou edite o arquivo `local.properties` e adicione:
+
+```properties
+sdk.dir=/caminho/para/seu/Android/sdk
+flutter.sdk=/caminho/para/seu/flutter/sdk
+licenceKey=<sua_licenca_jylabtech>
+licenceInternalKey=***REMOVIDO***
+```
+
+> ⚠️ **Importante:**
+>
+> - O `compileSdk` deve ser **35 ou superior** para evitar conflitos com dependências do AndroidX
+> - O `minSdk` deve ser **23 ou superior** (requisito do SDK Stone)
+> - Certifique-se de que todas as configurações de `compileSdkVersion` em subprojetos também estejam na versão 35+
+
+### Resumo de Versões Utilizadas
+
+```gradle
+// Gradle
+gradle-8.12
+
+// Kotlin
+kotlin_version = '2.1.21'
+
+// Stone SDK
+stone_sdk_version = '4.13.0'
+
+// Android Gradle Plugin
+classpath 'com.android.tools.build:gradle:8.12.1'
+
+// SDK Versions
+compileSdk = 35
+targetSdk = 35
+minSdk = 23
+```
 
 ## 🔐 Licenciamento
 
@@ -65,20 +158,22 @@ licenceInternalKey=***REMOVIDO***
 - Positivo L400
 - Ingenico APOS A8
 - Sunmi P2
+- Sunmi A-11
 - Gertec GPOS700X
 - Tectoy T2
+- Tectoy T8
 
 ---
 
-## 🚀 Tecnologias
+## 🚀 <a name="tecnologias">Tecnologias</a>
 
 - [Flutter](https://flutter.dev/)
-- SDK Stone `4.12.0`
+- SDK Stone `4.13.0`
 - Comunicação via Platform Channels
 
 ---
 
-## ⚙️ Instalação
+## ⚙️ <a name="instalacao">Instalação</a>
 
 ### 1. `pubspec.yaml`
 
@@ -159,7 +254,7 @@ android {
 
 ---
 
-## 📦 Uso
+## 📦 <a name="uso">Uso</a>
 
 ### Criando um `StoneHandler`
 
@@ -302,7 +397,7 @@ Caso queira passar um estilo diferente para o `StoneStreamDialog` ou para `Stone
 
 ---
 
-## 📄 Modelo de resposta
+## 📄 <a name="respostas">Modelo de Resposta</a>
 
 ### Exemplo: `onAuthProgress`, `onChanged`, `onError`
 

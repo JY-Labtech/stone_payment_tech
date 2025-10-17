@@ -115,8 +115,10 @@ public class LicenceProvider {
         try {
             return future.get(); // aguarda a execução completa
         } catch (ExecutionException e) {
-
-            throw e.getCause() != null ? (Exception) e.getCause() : e;
+            licenceResult.setResult(999999);
+            licenceResult.setErrorMessage(e.getMessage());
+            return licenceResult;
+            // throw e.getCause() != null ? (Exception) e.getCause() : e;
         }
     }
 
