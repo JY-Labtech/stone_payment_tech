@@ -51,6 +51,7 @@ rootProject.allprojects {
         mavenCentral()
         maven { url "https://packagecloud.io/priv/${packageCloudReadToken}/stone/pos-android/maven2" }
         maven { url "https://packagecloud.io/priv/${packageCloudReadTokenInternal}/stone/pos-android-internal/maven2" }
+        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     }
 }
 
@@ -140,6 +141,11 @@ android {
             signingConfig signingConfigs.gertecGpos700
             versionNameSuffix "-gertecGpos700"
         }
+        gertecGposSeries7 {
+            dimension "model"
+            signingConfig signingConfigs.gertecGpos700
+            versionNameSuffix "-gertecGposSeries7"
+        }
         positivoSeriesL {
             dimension "model"
             signingConfig signingConfigs.positivoStandard
@@ -154,6 +160,11 @@ android {
             dimension "model"
             signingConfig signingConfigs.sunmiStandard
             versionNameSuffix "-sunmi"
+        }
+        sunmiSeriesP {
+            dimension "model"
+            signingConfig signingConfigs.sunmiStandard
+            versionNameSuffix "-sunmiSeriesP"
         }
         tectoySeriesT {
             dimension "model"
@@ -184,8 +195,10 @@ dependencies {
     implementation "br.com.stone:stone-sdk-posandroid:$stone_sdk_version"
     ingenicoImplementation "br.com.stone:stone-sdk-posandroid-ingenico:$stone_sdk_version"
     sunmiImplementation "br.com.stone:stone-sdk-posandroid-sunmi:$stone_sdk_version"
+    sunmiSeriesPImplementation "br.com.stone:stone-sdk-posandroid-sunmi:$stone_sdk_version"
     tectoySeriesTImplementation "br.com.stone:stone-sdk-posandroid-tectoy:$stone_sdk_version"
     gertecGpos700Implementation "br.com.stone:stone-sdk-posandroid-gertec:$stone_sdk_version"
+    gertecGposSeries7Implementation "br.com.stone:stone-sdk-posandroid-gertec:$stone_sdk_version"
     positivoSeriesLImplementation "br.com.stone:stone-sdk-posandroid-positivo:$stone_sdk_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"

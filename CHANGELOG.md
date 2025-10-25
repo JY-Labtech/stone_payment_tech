@@ -1,3 +1,7 @@
+## 2.0.1
+
+- Add Flavor sunmiSeriesP and gertecGposSeries7
+
 ## 2.0.0
 
 - Update Stone SDK to 4.13.0
