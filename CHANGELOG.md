@@ -1,3 +1,7 @@
+## 2.0.2
+
+- Add Flavor sunmiSeriesP and gertecGposSeries7
+
 ## 2.0.1
 
 - Add Flavor sunmiSeriesP and gertecGposSeries7
