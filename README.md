@@ -224,37 +224,30 @@ android {
     productFlavors {
         gertecGpos700 {
             dimension "model"
-            signingConfig signingConfigs.gertecGpos700
             versionNameSuffix "-gertecGpos700"
         }
         gertecGposSeries7 {
             dimension "model"
-            signingConfig signingConfigs.gertecGpos700
             versionNameSuffix "-gertecGposSeries7"
         }
         positivoSeriesL {
             dimension "model"
-            signingConfig signingConfigs.positivoStandard
             versionNameSuffix "-positivoSeriesL"
         }
         ingenico {
             dimension "model"
-            signingConfig signingConfigs.ingenicoStandard
             versionNameSuffix "-ingenico"
         }
         sunmi {
             dimension "model"
-            signingConfig signingConfigs.sunmiStandard
             versionNameSuffix "-sunmi"
         }
         sunmiSeriesP {
             dimension "model"
-            signingConfig signingConfigs.sunmiStandard
             versionNameSuffix "-sunmiSeriesP"
         }
         tectoySeriesT {
             dimension "model"
-            signingConfig signingConfigs.tectoyStandard
             versionNameSuffix "-tectoySeriesT"
         }
     }
