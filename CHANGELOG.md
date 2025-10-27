@@ -1,3 +1,8 @@
+## 2.0.2+1
+
+- Add Flavor sunmiSeriesP and gertecGposSeries7
+- Fix android manifest
+
 ## 2.0.2
 
 - Add Flavor sunmiSeriesP and gertecGposSeries7
