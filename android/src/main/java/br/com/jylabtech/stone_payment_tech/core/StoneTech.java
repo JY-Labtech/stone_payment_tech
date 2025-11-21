@@ -126,6 +126,10 @@ public class StoneTech {
                 this.payment.abortCurrentPosTransaction();
                 break;
 
+            case PAYMENT_ABORT_ACTIVATION:
+                this.payment.abortActivation();
+                break;
+
             case PAYMENT_OPTIONS:
                 this.payment.setPaymentOption(call.argument("option"));
                 break;

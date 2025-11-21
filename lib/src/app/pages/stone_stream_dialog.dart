@@ -33,6 +33,8 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
   bool reciboWhatsApp = false;
   bool isLoading = false;
   bool isBlockPop = false;
+  bool _hasStartedTransaction = false;
+  bool _isActivating = false;
   final stoneController = StoneStreamController(handler: StoneStreamHandler());
   late StoneStreamStyle style;
   late Timer _timerTransaction;
@@ -144,14 +146,26 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                 final data = snapshot.data;
 
                 if (data case StoneStatusActivate()) {
-                  stoneController.startTransaction(params: widget.stonePaymentParams);
+                  _isActivating = false;
+                  // Evitar chamar startTransaction múltiplas vezes
+                  if (!_hasStartedTransaction && mounted) {
+                    _hasStartedTransaction = true;
+                    // Usar WidgetsBinding para garantir que não estamos no build
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        stoneController.startTransaction(params: widget.stonePaymentParams);
+                      }
+                    });
+                  }
                 }
 
                 if (data case StoneStatusActivateRunning()) {
+                  _isActivating = true;
                   return _text(data.message);
                 }
 
                 if (data case StoneStatusActivateError()) {
+                  _isActivating = false;
                   _error();
                   return _text(data.message);
                 }
@@ -233,15 +247,40 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
               stream: stoneController.stream,
               builder: (context, snapshot) {
                 final data = snapshot.data;
-                if (data case StoneStatusMessage()) {
+                // Mostrar botão durante ativação ou quando há mensagem
+                final isActivatingStatus = data is StoneStatusActivateRunning;
+                final isMessageStatus = data is StoneStatusMessage;
+                final isErrorStatus = data is StoneStatusActivateError;
+                final shouldShowAbortButton = _isActivating || isActivatingStatus || isMessageStatus || isErrorStatus;
+
+                if (shouldShowAbortButton) {
+                  final isDuringActivation = _isActivating || isActivatingStatus;
                   return ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: style.buttonColor),
-                    child: Text("Abortar transação", style: TextStyle(color: style.buttonTextColor)),
-                    onPressed: () async {
-                      stoneController.abortTransaction();
-                      await Future.delayed(const Duration(seconds: 1));
-                      _pop();
-                    },
+                    child: Text(
+                      isDuringActivation ? "Cancelar ativação" : "Abortar transação",
+                      style: TextStyle(color: style.buttonTextColor),
+                    ),
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            // Prevenir múltiplos cliques
+                            if (isLoading) return;
+                            setState(() => isLoading = true);
+
+                            try {
+                              stoneController.abortTransaction();
+                              // Aguardar um pouco para o abort ser processado
+                              await Future.delayed(const Duration(seconds: 1));
+                              if (mounted) {
+                                _pop();
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() => isLoading = false);
+                              }
+                            }
+                          },
                   );
                 }
                 return const SizedBox.shrink();

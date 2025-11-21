@@ -103,6 +103,10 @@ class StoneStreamHandler extends IStoneHandler {
             final message = (map['message'] ?? '').toString().toLowerCase();
             if (message.contains('terminal ativado')) {
               lastStatus = const StoneStatusActivate();
+            } else if (message.contains('licença ativada')) {
+              // Ignorar mensagem de licença ativada durante o fluxo de ativação do terminal
+              // Esta mensagem vem do checkValidLicence e não deve interferir no fluxo
+              return;
             } else {
               lastStatus = StoneStatusActivateError(message: map['message'] ?? 'Erro ao ativar o terminal');
             }

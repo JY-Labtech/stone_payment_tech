@@ -1,3 +1,7 @@
+## 2.0.3
+
+- Fix licence validator
+
 ## 2.0.2+1
 
 - Add Flavor sunmiSeriesP and gertecGposSeries7

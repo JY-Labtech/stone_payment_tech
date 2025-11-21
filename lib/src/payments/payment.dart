@@ -240,6 +240,11 @@ final class Payment {
     return await channel.invokeMethod(PaymentTypeCall.abortPix.method);
   }
 
+  /// Function to invoke method from abort activation with SDK the Stone
+  Future<bool> abortActivation() async {
+    return await channel.invokeMethod(PaymentTypeCall.abortActivation.method);
+  }
+
   /// Function to invoke method from printer current transaction with SDK the Stone
   Future<bool> printerCurrentTransaction({required bool printCustomerSlip}) async {
     return await channel.invokeMethod(PaymentTypeCall.printTransaction.method, {"printCustomerSlip": printCustomerSlip});
