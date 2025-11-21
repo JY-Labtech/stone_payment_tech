@@ -178,7 +178,7 @@ public class PaymentsUseCase {
     Log.d("print", "****** handleTransactionSuccess: " + transaction.getTransactionStatus());
     }
     TransactionObject transactionObject = transactionDAO.findTransactionWithInitiatorTransactionKey(transaction.getInitiatorTransactionKey());
-    if(!userModel.isEmpty()){
+    if(userModel != null && !userModel.isEmpty()){
       String userModelString = getGson().toJson(userModel.get(0));
       actionResult.setUserModel(userModelString);
     }
@@ -268,7 +268,7 @@ public class PaymentsUseCase {
             actionResult.setMessageFromAuthorize(transactionObject.getAuthorizationCode());
             actionResult.setAuthorizationCode(transactionObject.getAuthorizationCode());
 
-            if(!userModel.isEmpty()){
+            if(userModel != null && !userModel.isEmpty()){
               String userModelString = getGson().toJson(userModel.get(0));
               actionResult.setUserModel(userModelString);
             }
@@ -290,6 +290,11 @@ public class PaymentsUseCase {
         transaction.setInitiatorTransactionKey(InitiatorTransactionKey);
       }
 
+
+      // Verificar se userModel não está vazio antes de usar
+      if (userModel == null || userModel.isEmpty()) {
+        throw new Exception("Usuário não encontrado. Ative o terminal antes de realizar transações.");
+      }
 
       //Essa variavel posTransactionProvider está armazenando o provider para que possamos cancelar a transação
       posTransactionProvider = new PosTransactionProvider(context, transaction, userModel.get(0));
@@ -444,28 +449,41 @@ public class PaymentsUseCase {
     if(isDebugLog) {
     Log.d("print", "***** abortPIXTransaction");
     }
-    try {
-      cancelTransactionPIX(context);
-    }catch (Exception err) {
-      Log.d("print", "****ERRO_cancelTransactionPIX: " + err.getMessage());
-    }
-
-    try {
-      posTransactionProvider.abortPayment();
-      isAbortRunning = true;
-    } catch (Exception error){
-      Log.d("print", "****ERRO_abortCurrentPosTransaction: " + error.getMessage());
-    }
-
-
     BasicResult basicResult = new BasicResult();
     basicResult.setMethod("abortPix");
-    mFragment.onMessage("Transação cancelada");
-    basicResult.setResult(999999);
-    basicResult.setMessage("Transação cancelada");
-    basicResult.setErrorMessage("Transação cancelada");
-    String jsonError = convertBasicResultToJson(basicResult);
-    mFragment.onFinishedResponse(jsonError);
+    
+    try {
+      cancelTransactionPIX(context);
+    } catch (Exception err) {
+      if (isDebugLog) {
+        Log.d("print", "****ERRO_cancelTransactionPIX: " + err.getMessage());
+      }
+      // O erro já foi reportado em cancelTransactionPIX, mas garantimos que a mensagem seja enviada
+      mFragment.onMessage("Tentando cancelar transação PIX");
+    }
+
+    try {
+      if (posTransactionProvider != null) {
+        posTransactionProvider.abortPayment();
+        isAbortRunning = true;
+      }
+    } catch (Exception error){
+      if (isDebugLog) {
+        Log.d("print", "****ERRO_abortCurrentPosTransaction: " + error.getMessage());
+      }
+      // Reportar erro ao Flutter se não foi reportado ainda
+      basicResult.setResult(999999);
+      basicResult.setErrorMessage("Erro ao abortar transação: " + error.getMessage());
+      mFragment.onError(convertBasicResultToJson(basicResult));
+    }
+
+    // Sempre reportar resultado ao Flutter
+    if (basicResult.getResult() != 999999) {
+      basicResult.setResult(0);
+      basicResult.setMessage("Transação PIX cancelada");
+    }
+    mFragment.onMessage("Transação PIX cancelada");
+    mFragment.onFinishedResponse(convertBasicResultToJson(basicResult));
   }
 
   private String convertActionToJson(ActionResult actionResult) {
@@ -538,7 +556,7 @@ public class PaymentsUseCase {
         basicResult.setMethod("active");
         basicResult.setResult(0);
         basicResult.setMessage("Terminal ativado");
-        if(!userModel.isEmpty()) {
+        if(userModel != null && !userModel.isEmpty()) {
           String userModelString = getGson().toJson(userModel.get(0));
           basicResult.setUserModel(userModelString);
         }
@@ -670,16 +688,25 @@ public class PaymentsUseCase {
     BasicResult basicResult = new BasicResult();
     basicResult.setMethod("abortPix");
     if (posTransactionProvider != null) {
-        posTransactionProvider.abortPayment();
-        isAbortRunning = true;
+        try {
+            posTransactionProvider.abortPayment();
+            isAbortRunning = true;
+        } catch (Exception abortError) {
+            if (isDebugLog) {
+                Log.d("print", "****ERRO ao abortar payment: " + abortError.getMessage());
+            }
+        }
     }
     try {
       final CancellationProvider cancellationProvider = new CancellationProvider(context, currentTransactionObject);
       cancellationProvider.execute();
     } catch (Exception error) {
       Log.d("print", "****ERRO_cancelTransactionPIX: " + error.getMessage());
-      mFragment.onMessage("Transação cancelada");
+      mFragment.onMessage("Erro ao cancelar transação PIX");
       basicResult.setResult(999999);
+      basicResult.setErrorMessage(error.getMessage());
+      mFragment.onError(convertBasicResultToJson(basicResult));
+      mFragment.onFinishedResponse(convertBasicResultToJson(basicResult));
     }
   }
 
@@ -830,9 +857,16 @@ public class PaymentsUseCase {
     }
      if(status == null || (status != TransactionStatusEnum.WITH_ERROR && status != TransactionStatusEnum.APPROVED) ) {
        if(posTransactionProvider != null &&  !isAbortRunning) {
-         mFragment.onMessage(posTransactionProvider.getMessageFromAuthorize());
-         posTransactionProvider.abortPayment();
-         isAbortRunning = true;
+         try {
+           mFragment.onMessage(posTransactionProvider.getMessageFromAuthorize());
+           posTransactionProvider.abortPayment();
+           isAbortRunning = true;
+         } catch (Exception abortError) {
+           if (isDebugLog) {
+             Log.d("print", "****ERRO ao abortar payment em checkStatusWithErrorTransaction: " + abortError.getMessage());
+           }
+           isAbortRunning = true; // Marcar como abortado mesmo em caso de erro
+         }
        }
        return;
      }
@@ -869,6 +903,7 @@ public class PaymentsUseCase {
         public void onError() {
           basicResult.setResult(999999);
           basicResult.setMessage("ERROR");
+          basicResult.setErrorMessage("Erro ao reverter transação");
           mFragment.onFinishedResponse(convertBasicResultToJson(basicResult));
         }
       });
@@ -876,9 +911,10 @@ public class PaymentsUseCase {
     } catch (Exception error) {
       Log.d("print", "****ERRO_onReversalTransaction: " + error.getMessage());
       basicResult.setResult(999999);
-      basicResult.setErrorMessage(error.getMessage());
+      basicResult.setErrorMessage("Erro ao reverter transação: " + (error.getMessage() != null ? error.getMessage() : "Erro desconhecido"));
       basicResult.setMessage("ERROR");
-          mFragment.onFinishedResponse(convertBasicResultToJson(basicResult));
+      mFragment.onError(convertBasicResultToJson(basicResult));
+      mFragment.onFinishedResponse(convertBasicResultToJson(basicResult));
     }
   }
 
