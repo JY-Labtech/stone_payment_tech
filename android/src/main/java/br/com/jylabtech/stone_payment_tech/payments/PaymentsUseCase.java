@@ -40,6 +40,8 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import androidx.core.content.ContextCompat;
 
@@ -50,16 +52,22 @@ public class PaymentsUseCase {
   private StonePrinter mStonePrinter;
   private TransactionObject currentTransactionObject;
   private PosTransactionProvider posTransactionProvider;
+  private ActiveApplicationProvider activeApplicationProvider;
   private List<UserModel> userModel;
   private List<String> optionList;
   private boolean isInitialized = false;
   private boolean isDebugLog = false;
   List<TransactionObject> transactionObjects;
   private boolean isAbortRunning = false;
+  private boolean isActivationRunning = false;
 
   private Context context;
   private CheckLicenceTech licenceTech;
   Gson gson = null;
+  
+  private static final int ACTIVATION_TIMEOUT_MS = 60000; // 60 segundos
+  private android.os.Handler timeoutHandler;
+  private Runnable timeoutRunnable;
 
 
 
@@ -70,6 +78,7 @@ public class PaymentsUseCase {
     this.isDebugLog = isDebugLog;
     this.context = context1;
     this.licenceTech = new CheckLicenceTech(context1);
+    this.timeoutHandler = new Handler(Looper.getMainLooper());
   }
 
   private boolean isValidLicence() throws Exception {
@@ -409,6 +418,28 @@ public class PaymentsUseCase {
     }
   }
 
+  public void abortActivation() {
+    if (isActivationRunning) {
+      if (isDebugLog) {
+        Log.d("print", "****Abortando ativação do terminal (método público)...");
+      }
+      
+      isActivationRunning = false;
+      cancelActivationTimeout();
+      
+      BasicResult abortResult = new BasicResult();
+      abortResult.setMethod("active");
+      abortResult.setResult(999999);
+      abortResult.setErrorMessage("Ativação cancelada pelo usuário");
+      
+      mFragment.onMessage("Ativação cancelada");
+      mFragment.onError(convertBasicResultToJson(abortResult));
+      mFragment.onFinishedResponse(convertBasicResultToJson(abortResult));
+      
+      activeApplicationProvider = null;
+    }
+  }
+
   public void abortPIXTransaction(Context context) {
     if(isDebugLog) {
     Log.d("print", "***** abortPIXTransaction");
@@ -472,8 +503,35 @@ public class PaymentsUseCase {
       userModel = userList;
 
       if (userList == null) {
-        ActiveApplicationProvider activeApplicationProvider = getActiveApplicationProvider(context);
-        activeApplicationProvider.activate(stoneCode);
+        if (isActivationRunning) {
+          if (isDebugLog) {
+            Log.d("print", "****Ativação já em andamento, cancelando anterior...");
+          }
+          abortActivationInternal();
+        }
+        
+        activeApplicationProvider = getActiveApplicationProvider(context);
+        isActivationRunning = true;
+        
+        // Configurar timeout
+        setupActivationTimeout(context);
+        
+        try {
+          activeApplicationProvider.activate(stoneCode);
+        } catch (Exception activateError) {
+          isActivationRunning = false;
+          cancelActivationTimeout();
+          if (isDebugLog) {
+            Log.d("print", "****ERRO ao chamar activate: " + activateError.getMessage());
+          }
+          BasicResult errorResult = new BasicResult();
+          errorResult.setMethod("active");
+          errorResult.setResult(999999);
+          errorResult.setErrorMessage("Erro ao iniciar ativação: " + activateError.getMessage());
+          mFragment.onError(convertBasicResultToJson(errorResult));
+          mFragment.onFinishedResponse(convertBasicResultToJson(errorResult));
+          throw activateError;
+        }
 
       } else {
         mFragment.onMessage("Terminal ativado");
@@ -490,6 +548,14 @@ public class PaymentsUseCase {
       }
     } catch (Exception error) {
       Log.d("print", "****ERRO_initializeAndActivatePinpad: " + error.getMessage());
+      isActivationRunning = false;
+      cancelActivationTimeout();
+      BasicResult errorResult = new BasicResult();
+      errorResult.setMethod("active");
+      errorResult.setResult(999999);
+      errorResult.setErrorMessage("Erro ao ativar terminal: " + error.getMessage());
+      mFragment.onError(convertBasicResultToJson(errorResult));
+      mFragment.onFinishedResponse(convertBasicResultToJson(errorResult));
     }
   }
 
@@ -511,8 +577,35 @@ public class PaymentsUseCase {
       userModel = userList;
 
       if (userList == null) {
-        ActiveApplicationProvider activeApplicationProvider = getActiveApplicationProvider(context);
-        activeApplicationProvider.activate(stoneCode);
+        if (isActivationRunning) {
+          if (isDebugLog) {
+            Log.d("print", "****Ativação já em andamento, cancelando anterior...");
+          }
+          abortActivationInternal();
+        }
+        
+        activeApplicationProvider = getActiveApplicationProvider(context);
+        isActivationRunning = true;
+        
+        // Configurar timeout
+        setupActivationTimeout(context);
+        
+        try {
+          activeApplicationProvider.activate(stoneCode);
+        } catch (Exception activateError) {
+          isActivationRunning = false;
+          cancelActivationTimeout();
+          if (isDebugLog) {
+            Log.d("print", "****ERRO ao chamar activate: " + activateError.getMessage());
+          }
+          BasicResult errorResult = new BasicResult();
+          errorResult.setMethod("active");
+          errorResult.setResult(999999);
+          errorResult.setErrorMessage("Erro ao iniciar ativação: " + activateError.getMessage());
+          mFragment.onError(convertBasicResultToJson(errorResult));
+          mFragment.onFinishedResponse(convertBasicResultToJson(errorResult));
+          throw activateError;
+        }
 
       } else {
         mFragment.onMessage("Terminal ativado");
@@ -529,6 +622,14 @@ public class PaymentsUseCase {
       }
     }catch (Exception error){
       Log.d("print", "****ERRO_initializeAndActivatePinPadWithCredentials: " + error.getMessage());
+      isActivationRunning = false;
+      cancelActivationTimeout();
+      BasicResult errorResult = new BasicResult();
+      errorResult.setMethod("active");
+      errorResult.setResult(999999);
+      errorResult.setErrorMessage("Erro ao ativar terminal: " + error.getMessage());
+      mFragment.onError(convertBasicResultToJson(errorResult));
+      mFragment.onFinishedResponse(convertBasicResultToJson(errorResult));
     }
   }
 
@@ -634,6 +735,8 @@ public class PaymentsUseCase {
     activeApplicationProvider.setConnectionCallback(new StoneCallbackInterface() {
       @Override
       public void onSuccess() {
+        isActivationRunning = false;
+        cancelActivationTimeout();
         mFragment.onMessage("Terminal ativado");
         mFragment.onTransactionSuccess();
         basicResult.setResult(0);
@@ -645,6 +748,8 @@ public class PaymentsUseCase {
 
       @Override
       public void onError() {
+        isActivationRunning = false;
+        cancelActivationTimeout();
         mFragment.onMessage("Erro ao ativar terminal");
         basicResult.setResult(999999);
         basicResult.setErrorMessage(mStoneHelper.getErrorFromErrorList(activeApplicationProvider.getListOfErrors()));
@@ -653,6 +758,70 @@ public class PaymentsUseCase {
       }
     });
     return activeApplicationProvider;
+  }
+
+  private void setupActivationTimeout(Context context) {
+    cancelActivationTimeout();
+    
+    timeoutRunnable = new Runnable() {
+      @Override
+      public void run() {
+        if (isActivationRunning && activeApplicationProvider != null) {
+          if (isDebugLog) {
+            Log.d("print", "****TIMEOUT: Ativação demorou mais de " + (ACTIVATION_TIMEOUT_MS / 1000) + " segundos");
+          }
+          
+          isActivationRunning = false;
+          BasicResult timeoutResult = new BasicResult();
+          timeoutResult.setMethod("active");
+          timeoutResult.setResult(999999);
+          timeoutResult.setErrorMessage("Timeout: Não foi possível conectar ao terminal. Verifique se o terminal está ligado e próximo.");
+          
+          mFragment.onMessage("Timeout: Terminal não respondeu");
+          mFragment.onError(convertBasicResultToJson(timeoutResult));
+          mFragment.onFinishedResponse(convertBasicResultToJson(timeoutResult));
+          
+          // Tentar abortar a ativação
+          abortActivationInternal();
+        }
+      }
+    };
+    
+    timeoutHandler.postDelayed(timeoutRunnable, ACTIVATION_TIMEOUT_MS);
+  }
+
+  private void cancelActivationTimeout() {
+    if (timeoutHandler != null && timeoutRunnable != null) {
+      timeoutHandler.removeCallbacks(timeoutRunnable);
+      timeoutRunnable = null;
+    }
+  }
+
+  private void abortActivationInternal() {
+    if (activeApplicationProvider != null && isActivationRunning) {
+      try {
+        if (isDebugLog) {
+          Log.d("print", "****Abortando ativação do terminal (interno)...");
+        }
+        // Nota: ActiveApplicationProvider pode não ter método de abort explícito
+        // Mas podemos limpar o estado
+        activeApplicationProvider = null;
+        isActivationRunning = false;
+        cancelActivationTimeout();
+      } catch (Exception e) {
+        if (isDebugLog) {
+          Log.d("print", "****ERRO ao abortar ativação: " + e.getMessage());
+        }
+      }
+    }
+  }
+
+  public void dispose() {
+    abortActivationInternal();
+    cancelActivationTimeout();
+    if (timeoutHandler != null) {
+      timeoutHandler.removeCallbacksAndMessages(null);
+    }
   }
 
   public void checkStatusWithErrorTransaction(TransactionStatusEnum status, Context context) {

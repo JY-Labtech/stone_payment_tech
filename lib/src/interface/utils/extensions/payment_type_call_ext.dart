@@ -8,6 +8,7 @@ extension PaymentTypeCallExt on PaymentTypeCall {
       PaymentTypeCall.debit: "paymentDebit",
       PaymentTypeCall.voucher: "paymentVoucher",
       PaymentTypeCall.abort: "paymentAbort",
+      PaymentTypeCall.abortActivation: "paymentAbortActivation",
       PaymentTypeCall.lastTransaction: "paymentLastTransaction",
       PaymentTypeCall.refund: "paymentRefund",
       PaymentTypeCall.activePinpad: "paymentActivePinpad",

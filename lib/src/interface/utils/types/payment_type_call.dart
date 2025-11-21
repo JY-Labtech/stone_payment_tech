@@ -6,6 +6,7 @@ enum PaymentTypeCall {
   voucher,
   abort,
   abortPix,
+  abortActivation,
   lastTransaction,
   refund,
   activePinpad,

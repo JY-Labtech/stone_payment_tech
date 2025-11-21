@@ -14,8 +14,11 @@ class StoneStreamController {
 
   StonePaymentType? currentMethod;
   bool isFinishPayment = false;
+  bool _isActivating = false;
 
   Stream<StoneStatus> get stream => handler?.statusStream ?? const Stream.empty();
+  
+  bool get isActivating => _isActivating;
 
   StoneStreamController({
     required this.handler,
@@ -67,10 +70,18 @@ class StoneStreamController {
     }
     credentials = params.credentials;
     if (!StoneTech.isPinpadActivated) {
+      _isActivating = true;
       handler!.setStreamStatus(const StoneStatusActivateRunning(message: 'Ativando Terminal...'));
-      await initialize(stoneCredentials: params.credentials, stonePaymentParams: params);
+      try {
+        await initialize(stoneCredentials: params.credentials, stonePaymentParams: params);
+        // Não resetar _isActivating aqui, será resetado quando receber StoneStatusActivate ou StoneStatusActivateError
+      } catch (e) {
+        _isActivating = false;
+        rethrow;
+      }
       return;
     } else {
+      _isActivating = false;
       stone.payment.setHandler(handler!);
     }
     final amountInt = _getSaleValueStone(params.amount);
@@ -129,7 +140,11 @@ class StoneStreamController {
   }
 
   void abortTransaction() {
-    if (currentMethod == StonePaymentType.pix) {
+    if (_isActivating) {
+      _isActivating = false;
+      handler?.setStreamStatus(const StoneStatusActivateError(message: 'Ativação cancelada pelo usuário'));
+      stone.payment.abortActivation();
+    } else if (currentMethod == StonePaymentType.pix) {
       stone.payment.abortPIXTransaction();
     } else {
       stone.payment.abortTransaction();

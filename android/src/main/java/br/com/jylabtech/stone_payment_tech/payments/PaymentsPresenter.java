@@ -95,6 +95,10 @@ public class PaymentsPresenter {
         mUseCase.initializeAndActivatePinPadWithCredentials(appName, stoneCode, stoneKeys, context);
 
     }
+
+    public void abortActivation() {
+        mUseCase.abortActivation();
+    }
     public void cancelTransaction(Context context, int idFromBase) throws Exception {
         mUseCase.cancelTransaction(context, idFromBase);
     }
@@ -149,6 +153,9 @@ public class PaymentsPresenter {
     public void dispose() {
         if (mSubscribe != null) {
             mSubscribe.dispose();
+        }
+        if (mUseCase != null) {
+            mUseCase.dispose();
         }
     }
 }

@@ -10,6 +10,7 @@ enum PaymentMethod {
     ACTIVE_PINPAD_CREDENTIALS("paymentActivePinpadCredentials"),
     PAYMENT_ABORT("paymentAbort"),
     PAYMENT_ABORT_PIX("paymentAbortPix"),
+    PAYMENT_ABORT_ACTIVATION("paymentAbortActivation"),
     PAYMENT_CANCEL_TRANSACTION("paymentCancelTransaction"),
     PAYMENT_REVERSAL("paymentReversal"),
     PAYMENT_OPTIONS("paymentOptions"),
