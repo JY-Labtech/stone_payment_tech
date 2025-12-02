@@ -29,6 +29,8 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
   String? popMessage;
   late Timer _timerTransaction;
   Timer? _timerPop;
+  StreamSubscription<StoneStatus>? _paymentOptionsSubscription;
+  bool _isShowingPaymentOptionsDialog = false;
 
   void setPopMessage(String? message) {
     popMessage = message;
@@ -46,6 +48,13 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
       isBlockPop = true;
     }
 
+    // Listener para detectar PaymentOptions e mostrar dialog
+    _paymentOptionsSubscription = stoneController.stream.listen((status) {
+      if (status is StoneStatusPaymentOptions && mounted && !_isShowingPaymentOptionsDialog) {
+        _showPaymentOptionsDialog(status.options, status.message);
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       stoneController.startTransaction(params: widget.stonePaymentParams);
     });
@@ -57,6 +66,7 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
     stoneController.handler?.streamDispose();
     _timerTransaction.cancel();
     _timerPop?.cancel();
+    _paymentOptionsSubscription?.cancel();
     super.dispose();
   }
 
@@ -340,6 +350,64 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
       return bytes;
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<void> _showPaymentOptionsDialog(List<String> options, String message) async {
+    if (!mounted || _isShowingPaymentOptionsDialog) return;
+
+    _isShowingPaymentOptionsDialog = true;
+
+    final selectedOption = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Selecione o tipo de cartão',
+            style: TextStyle(color: style.textColor),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (message.isNotEmpty) ...[
+                  Text(
+                    message,
+                    style: TextStyle(color: style.textColor),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                ...options.map((option) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: style.buttonColor,
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop(option);
+                      },
+                      child: Text(
+                        option,
+                        style: TextStyle(color: style.buttonTextColor),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    _isShowingPaymentOptionsDialog = false;
+
+    if (selectedOption != null && mounted) {
+      await stoneController.setPaymentOption(selectedOption);
     }
   }
 }
