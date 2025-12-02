@@ -71,7 +71,7 @@ class _HomePageState extends State<HomePage> {
                   MaterialPageRoute(
                     builder: (context) => StoneStreamPage(
                       stonePaymentParams: StonePaymentParams(
-                        amount: 0.55,
+                        amount: 0.99,
                         type: selectedPaymentType ?? StonePaymentType.debit,
                         credentials: StoneCredentialsModel(stoneCode: '***REMOVIDO***', appName: 'Stone Payment Tech'),
                       ),

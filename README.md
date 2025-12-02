@@ -445,6 +445,47 @@ Caso queira passar um estilo diferente para o `StoneStreamDialog` ou para `Stone
 }
 ```
 
+### Exemplo: `PaymentOptions`
+
+Quando uma transação requer seleção do tipo de cartão (alimentação/refeição), o seguinte objeto é retornado:
+
+```json
+{
+  "method": "PaymentOptions",
+  "options": ["Cartão Alimentação", "Cartão Refeição"],
+  "message": "Selecione o tipo de cartão"
+}
+```
+
+**Comportamento automático:**
+- Ao usar `StoneStreamPage` ou `StoneStreamDialog`, o plugin automaticamente:
+  1. Detecta quando `method = "PaymentOptions"` é recebido
+  2. Exibe um dialog com as opções disponíveis
+  3. Aguarda a seleção do usuário
+  4. Envia a opção selecionada via `setPaymentOption`
+  5. Continua o fluxo da transação normalmente
+
+**Implementação manual:**
+Se você estiver usando um handler customizado, você pode tratar o `PaymentOptions` manualmente:
+
+```dart
+@override
+Future<void> onFinishedResponse(String message) async {
+  final map = json.decode(message);
+  if (map['method'] == 'PaymentOptions') {
+    final options = List<String>.from(map['options'] ?? []);
+    final messageText = map['message'] ?? '';
+    
+    // Exibir dialog customizado e aguardar seleção
+    final selectedOption = await showDialog<String>(...);
+    
+    if (selectedOption != null) {
+      await StoneTech.I.payment.setPaymentOption(option: selectedOption);
+    }
+  }
+}
+```
+
 ---
 
 ## ❗ Observações importantes
@@ -452,6 +493,7 @@ Caso queira passar um estilo diferente para o `StoneStreamDialog` ou para `Stone
 - Para transações PIX, forneça `qrCodeAuthorization` e `qrCodeProviderid`.
 - Para exibir QRCode (campo `method: QRCode`), o retorno virá em `message` como uma imagem em `Bitmap` convertida para `String`.
 - O método `getAllTransactions()` pode ser usado para buscar transações anteriores para fins de estorno.
+- Para transações que requerem seleção de tipo de cartão (alimentação/refeição), o campo `method: PaymentOptions` será retornado com uma lista de opções no campo `options`. O plugin automaticamente exibe um dialog para o usuário selecionar a opção desejada.
 
 ---
 
@@ -478,7 +520,17 @@ void onFinishedResponseMonitor(StoneTransaction? stoneTransaction) {
       // Exibir QR Code
       break;
     case 'PaymentOptions':
-      // Use _stoneTech.payment.setPaymentOption(option: ...)
+      // Quando o método é PaymentOptions, o objeto retornado contém:
+      // - method: "PaymentOptions"
+      // - options: List<String> com as opções disponíveis (ex: ["Cartão Alimentação", "Cartão Refeição"])
+      // - message: String com mensagem informativa
+      // 
+      // O plugin automaticamente exibe um dialog para o usuário selecionar uma opção.
+      // Após a seleção, a opção é enviada automaticamente via setPaymentOption.
+      // 
+      // Se estiver usando StoneStreamPage ou StoneStreamDialog, o fluxo é automático.
+      // Para implementação manual, use:
+      // await StoneTech.I.payment.setPaymentOption(option: opcaoSelecionada);
       break;
     case 'reversal':
       break;

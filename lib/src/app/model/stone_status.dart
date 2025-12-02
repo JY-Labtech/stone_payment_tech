@@ -59,3 +59,13 @@ final class StoneStatusCanceled extends StoneStatus {
 
   const StoneStatusCanceled({required this.cancelExtraData});
 }
+
+final class StoneStatusPaymentOptions extends StoneStatus {
+  final List<String> options;
+  final String message;
+
+  const StoneStatusPaymentOptions({
+    required this.options,
+    required this.message,
+  });
+}

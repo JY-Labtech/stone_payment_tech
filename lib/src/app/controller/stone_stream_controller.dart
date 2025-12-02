@@ -17,7 +17,7 @@ class StoneStreamController {
   bool _isActivating = false;
 
   Stream<StoneStatus> get stream => handler?.statusStream ?? const Stream.empty();
-  
+
   bool get isActivating => _isActivating;
 
   StoneStreamController({
@@ -33,7 +33,6 @@ class StoneStreamController {
     }
     credentials = stoneCredentials;
     paymentParams = stonePaymentParams;
-
     stone.initPayment(handler: handler!);
     isFinishPayment = false;
 
@@ -177,5 +176,9 @@ class StoneStreamController {
 
   void onPrinterCustomer(bool value) async {
     stone.payment.printerCurrentTransaction(printCustomerSlip: value);
+  }
+
+  Future<void> setPaymentOption(String option) async {
+    await stone.payment.setPaymentOption(option: option);
   }
 }

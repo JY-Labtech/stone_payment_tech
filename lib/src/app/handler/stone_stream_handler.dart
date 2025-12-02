@@ -130,6 +130,13 @@ class StoneStreamHandler extends IStoneHandler {
             lastStatus = const StonePrinterCustomer();
             _emit(lastStatus!);
             return;
+          case 'PaymentOptions':
+            final optionsList = map['options'] as List<dynamic>?;
+            final options = optionsList?.map((e) => e.toString()).toList() ?? <String>[];
+            final message = (map['message'] ?? '').toString();
+            lastStatus = StoneStatusPaymentOptions(options: options, message: message);
+            _emit(lastStatus!);
+            return;
         }
       }
     } catch (e) {
