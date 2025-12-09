@@ -7,10 +7,10 @@ import 'package:stone_payment_tech/src/stone_tech_payment.dart';
 import '../../interface/interface.dart';
 
 class StoneCustomPrinterController {
-  late StonePrinterHandler handler;
+  late StoneTechPrinterHandler handler;
 
   StoneTech get stone => StoneTech.I;
-  late StoneCredentialsModel credentials;
+  late StoneTechCredentialsModel credentials;
 
   void onFinished(
     String value, {
@@ -42,13 +42,13 @@ class StoneCustomPrinterController {
   }
 
   Future<void> initialize({
-    required StoneCredentialsModel stoneCredentials,
+    required StoneTechCredentialsModel stoneCredentials,
     required Function(String) onMessage,
     required Function() onSuccess,
     required Function(String) onError,
   }) async {
     credentials = stoneCredentials;
-    handler = StonePrinterHandler(
+    handler = StoneTechPrinterHandler(
       onFinishedMonitor: (e) => onFinished(e, onSuccess: onSuccess, onError: onError),
       onMessageMonitor: onMessage,
     );
@@ -77,13 +77,13 @@ class StoneCustomPrinterController {
   }
 
   Future<void> initializeAndPrintBase64({
-    required StoneCredentialsModel stoneCredentials,
+    required StoneTechCredentialsModel stoneCredentials,
     required Function(String) onMessage,
     required Function(String) onError,
     required String base64,
   }) async {
     credentials = stoneCredentials;
-    handler = StonePrinterHandler(
+    handler = StoneTechPrinterHandler(
       onFinishedMonitor: (e) => onFinished(e, onSuccess: () {
         stone.payment.printFromBase64(base64);
       }, onError: onError),

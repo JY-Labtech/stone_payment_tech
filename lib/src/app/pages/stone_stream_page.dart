@@ -13,7 +13,7 @@ import 'package:stone_payment_tech/src/interface/model/stone_transaction_model.d
 import '../controller/stone_stream_controller.dart';
 
 class StoneStreamPage extends StatefulWidget {
-  final StonePaymentParams stonePaymentParams;
+  final StoneTechPaymentParams stonePaymentParams;
   final StoneStreamStyle? style;
 
   const StoneStreamPage({super.key, required this.stonePaymentParams, this.style});
@@ -29,7 +29,7 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
   String? popMessage;
   late Timer _timerTransaction;
   Timer? _timerPop;
-  StreamSubscription<StoneStatus>? _paymentOptionsSubscription;
+  StreamSubscription<StoneStatusTech>? _paymentOptionsSubscription;
   bool _isShowingPaymentOptionsDialog = false;
 
   void setPopMessage(String? message) {
@@ -44,13 +44,13 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
       stoneController.abortTransaction();
       _popWithResult(null);
     });
-    if (widget.stonePaymentParams.type == StonePaymentType.pix) {
+    if (widget.stonePaymentParams.type == StoneTechPaymentType.pix) {
       isBlockPop = true;
     }
 
     // Listener para detectar PaymentOptions e mostrar dialog
     _paymentOptionsSubscription = stoneController.stream.listen((status) {
-      if (status is StoneStatusPaymentOptions && mounted && !_isShowingPaymentOptionsDialog) {
+      if (status is StoneStatusTechPaymentOptions && mounted && !_isShowingPaymentOptionsDialog) {
         _showPaymentOptionsDialog(status.options, status.message);
       }
     });
@@ -114,11 +114,11 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                     children: [
                       /// QRCode
                       Center(
-                        child: StreamBuilder<StoneStatus>(
+                        child: StreamBuilder<StoneStatusTech>(
                           stream: stoneController.stream,
                           builder: (context, snapshot) {
                             final data = snapshot.data;
-                            if (data case StoneQRCodeTransaction()) {
+                            if (data case StoneStatusTechQRCodeTransaction()) {
                               return FutureBuilder(
                                 future: setQrCode(data.transaction.message!),
                                 builder: (context, snapshot) {
@@ -157,29 +157,29 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
 
                       /// Mensagens e status
                       Center(
-                        child: StreamBuilder<StoneStatus>(
+                        child: StreamBuilder<StoneStatusTech>(
                           stream: stoneController.stream,
                           builder: (context, snapshot) {
                             final data = snapshot.data;
 
-                            if (data case StoneStatusActivate()) {
+                            if (data case StoneStatusTechActivate()) {
                               stoneController.startTransaction(params: widget.stonePaymentParams);
                             }
 
-                            if (data case StoneStatusActivateRunning()) {
+                            if (data case StoneStatusTechActivateRunning()) {
                               return _text(data.message);
                             }
 
-                            if (data case StoneStatusActivateError()) {
+                            if (data case StoneStatusTechActivateError()) {
                               _error();
                               return _text(data.message);
                             }
 
-                            if (data case StoneStatusMessage()) {
+                            if (data case StoneStatusTechMessage()) {
                               return _text(data.message);
                             }
 
-                            if (data case StoneStatusTransaction()) {
+                            if (data case StoneStatusTechTransaction()) {
                               if (data.transaction.errorMessage?.contains('QRCODE_EXPIRED') == true) {
                                 setBlockPop(false);
                               }
@@ -246,7 +246,7 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                               return _text("Erro ao processar transação", isLoading: false);
                             }
 
-                            if (data case StoneStatusCanceled()) {
+                            if (data case StoneStatusTechCanceled()) {
                               return _text("Transação cancelada", isLoading: false);
                             }
                             return const SizedBox.shrink();
@@ -258,11 +258,11 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
 
                       /// Botão de abortar
                       Center(
-                        child: StreamBuilder<StoneStatus>(
+                        child: StreamBuilder<StoneStatusTech>(
                           stream: stoneController.stream,
                           builder: (context, snapshot) {
                             final data = snapshot.data;
-                            if (data case StoneStatusMessage()) {
+                            if (data case StoneStatusTechMessage()) {
                               return ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: style.buttonColor),
                                 child: Text("Abortar transação", style: TextStyle(color: style.buttonTextColor)),
@@ -396,7 +396,7 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),

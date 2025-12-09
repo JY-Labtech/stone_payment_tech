@@ -6,7 +6,7 @@ import 'package:stone_payment_tech/src/printer/widgets/printer_custom_body.dart'
 import 'package:stone_payment_tech/src/printer/widgets/printer_loading_widget.dart';
 
 class StonePrinterPageParams {
-  final StoneCredentialsModel credentials;
+  final StoneTechCredentialsModel credentials;
   final Widget child;
 
   StonePrinterPageParams({

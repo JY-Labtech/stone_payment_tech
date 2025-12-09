@@ -4,11 +4,11 @@ import '../model/stone_transaction_model.dart';
 abstract class IStoneTechHandler {
   void onTransactionSuccess();
 
-  void onError(StoneResponse response);
+  void onError(StoneTechResponse response);
 
   void onMessage(String message);
 
-  void onChanged(StoneResponse response);
+  void onChanged(StoneTechResponse response);
 
   void onFinishedResponse(StoneTransactionModel response);
 
@@ -18,7 +18,7 @@ abstract class IStoneTechHandler {
 
   void onAbortedSuccessfully();
 
-  void onAuthProgress(StoneResponse response);
+  void onAuthProgress(StoneTechResponse response);
 
   void onTransactionInfo(String response);
 }

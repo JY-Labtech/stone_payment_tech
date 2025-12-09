@@ -11,21 +11,21 @@ import 'package:stone_payment_tech/src/interface/utils/types/payment_type_call.d
 import '../stone_tech_payment.dart';
 import 'helper/istone_helper.dart';
 
-final class Payment {
+final class StonePayment {
   final MethodChannel channel;
   IStoneHandler paymentHandler;
   // final IStoneTechHandler? iStoneTechHandler;
 
   // Cache da instância criada
-  static Payment? _instance;
+  static StonePayment? _instance;
 
-  Payment._({
+  StonePayment._({
     required this.channel,
     required this.paymentHandler,
   });
 
   /// Método factory assíncrono para criação controlada e validação da licença
-  static Payment create({
+  static StonePayment create({
     required MethodChannel channel,
     required IStoneHandler paymentHandler,
     IStoneTechHandler? iStoneTechHandler,
@@ -36,7 +36,7 @@ final class Payment {
     }
 
     // Cria nova instância
-    final payment = Payment._(
+    final payment = StonePayment._(
       channel: channel,
       paymentHandler: paymentHandler,
     );

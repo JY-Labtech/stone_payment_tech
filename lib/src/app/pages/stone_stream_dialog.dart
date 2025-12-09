@@ -13,7 +13,7 @@ import 'package:stone_payment_tech/src/interface/model/stone_transaction_model.d
 import '../controller/stone_stream_controller.dart';
 
 class StoneStreamDialog extends StatefulWidget {
-  final StonePaymentParams stonePaymentParams;
+  final StoneTechPaymentParams stonePaymentParams;
   final void Function(StoneTransactionModel) onConfirmPayment;
   final StoneStreamStyle? style;
 
@@ -39,7 +39,7 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
   late StoneStreamStyle style;
   late Timer _timerTransaction;
   Timer? _timerPop;
-  StreamSubscription<StoneStatus>? _paymentOptionsSubscription;
+  StreamSubscription<StoneStatusTech>? _paymentOptionsSubscription;
   bool _isShowingPaymentOptionsDialog = false;
 
   String? popMessage;
@@ -54,14 +54,14 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
     _timerTransaction = Timer(const Duration(minutes: 10), () {
       _pop();
     });
-    if (widget.stonePaymentParams.type == StonePaymentType.pix) {
+    if (widget.stonePaymentParams.type == StoneTechPaymentType.pix) {
       isBlockPop = true;
     }
     super.initState();
 
     // Listener para detectar PaymentOptions e mostrar dialog
     _paymentOptionsSubscription = stoneController.stream.listen((status) {
-      if (status is StoneStatusPaymentOptions && mounted && !_isShowingPaymentOptionsDialog) {
+      if (status is StoneStatusTechPaymentOptions && mounted && !_isShowingPaymentOptionsDialog) {
         _showPaymentOptionsDialog(status.options, status.message);
       }
     });
@@ -112,11 +112,11 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
             const SizedBox(height: 5),
             Icon(style.icon ?? Icons.credit_card, color: style.iconColor, size: 45),
             const SizedBox(height: 10),
-            StreamBuilder<StoneStatus>(
+            StreamBuilder<StoneStatusTech>(
               stream: stoneController.stream,
               builder: (context, snapshot) {
                 final data = snapshot.data;
-                if (data case StoneQRCodeTransaction()) {
+                if (data case StoneStatusTechQRCodeTransaction()) {
                   return FutureBuilder(
                     future: setQrCode(data.transaction.message!),
                     builder: (context, snapshot) {
@@ -150,12 +150,12 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                 return const SizedBox.shrink();
               },
             ),
-            StreamBuilder<StoneStatus>(
+            StreamBuilder<StoneStatusTech>(
               stream: stoneController.stream,
               builder: (context, snapshot) {
                 final data = snapshot.data;
 
-                if (data case StoneStatusActivate()) {
+                if (data case StoneStatusTechActivate()) {
                   _isActivating = false;
                   // Evitar chamar startTransaction múltiplas vezes
                   if (!_hasStartedTransaction && mounted) {
@@ -169,21 +169,21 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                   }
                 }
 
-                if (data case StoneStatusActivateRunning()) {
+                if (data case StoneStatusTechActivateRunning()) {
                   _isActivating = true;
                   return _text(data.message);
                 }
 
-                if (data case StoneStatusActivateError()) {
+                if (data case StoneStatusTechActivateError()) {
                   _isActivating = false;
                   _error();
                   return _text(data.message);
                 }
 
-                if (data case StoneStatusMessage()) {
+                if (data case StoneStatusTechMessage()) {
                   return _text(data.message);
                 }
-                if (data case StoneStatusTransaction()) {
+                if (data case StoneStatusTechTransaction()) {
                   if (data.transaction.errorMessage?.contains('QRCODE_EXPIRED') == true) {
                     setBlockPop(false);
                   }
@@ -246,31 +246,27 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                   return _text("Error ao processar transação");
                 }
 
-                if (data case StoneStatusCanceled()) {
+                if (data case StoneStatusTechCanceled()) {
                   return _text("Transação cancelada");
                 }
                 return const SizedBox.shrink();
               },
             ),
             const SizedBox(height: 16),
-            StreamBuilder<StoneStatus>(
+            StreamBuilder<StoneStatusTech>(
               stream: stoneController.stream,
               builder: (context, snapshot) {
                 final data = snapshot.data;
                 // Mostrar botão durante ativação ou quando há mensagem
-                final isActivatingStatus = data is StoneStatusActivateRunning;
-                final isMessageStatus = data is StoneStatusMessage;
-                final isErrorStatus = data is StoneStatusActivateError;
+                final isActivatingStatus = data is StoneStatusTechActivateRunning;
+                final isMessageStatus = data is StoneStatusTechMessage;
+                final isErrorStatus = data is StoneStatusTechActivateError;
                 final shouldShowAbortButton = _isActivating || isActivatingStatus || isMessageStatus || isErrorStatus;
 
                 if (shouldShowAbortButton) {
                   final isDuringActivation = _isActivating || isActivatingStatus;
                   return ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: style.buttonColor),
-                    child: Text(
-                      isDuringActivation ? "Cancelar ativação" : "Abortar transação",
-                      style: TextStyle(color: style.buttonTextColor),
-                    ),
                     onPressed: isLoading
                         ? null
                         : () async {
@@ -291,6 +287,10 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                               }
                             }
                           },
+                    child: Text(
+                      isDuringActivation ? "Cancelar ativação" : "Abortar transação",
+                      style: TextStyle(color: style.buttonTextColor),
+                    ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -396,7 +396,7 @@ class _StoneStreamDialogState extends State<StoneStreamDialog> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),

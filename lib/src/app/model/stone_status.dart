@@ -1,73 +1,72 @@
 import 'package:stone_payment_tech/src/interface/model/stone_transaction_model.dart';
 
-sealed class StoneStatus {
-  const StoneStatus();
+sealed class StoneStatusTech {
+  const StoneStatusTech();
 
-  factory StoneStatus.message(String message) => StoneStatusMessage(message: message);
+  factory StoneStatusTech.message(String message) => StoneStatusTechMessage(message: message);
 
-  factory StoneStatus.transaction(StoneTransactionModel transaction) => StoneStatusTransaction(transaction: transaction);
+  factory StoneStatusTech.transaction(StoneTransactionModel transaction) => StoneStatusTechTransaction(transaction: transaction);
 
-  factory StoneStatus.activate() => const StoneStatusActivate();
-
-  factory StoneStatus.canceled(Map<String, dynamic> cancelExtraData) => StoneStatusCanceled(cancelExtraData: cancelExtraData);
+  factory StoneStatusTech.activate() => const StoneStatusTechActivate();
+  factory StoneStatusTech.canceled(Map<String, dynamic> cancelExtraData) => StoneStatusTechCanceled(cancelExtraData: cancelExtraData);
 }
 
-final class StoneStatusMessage extends StoneStatus {
+final class StoneStatusTechMessage extends StoneStatusTech {
   final String message;
 
-  const StoneStatusMessage({
+  const StoneStatusTechMessage({
     required this.message,
   });
 }
 
-final class StoneStatusTransaction extends StoneStatus {
+final class StoneStatusTechTransaction extends StoneStatusTech {
   final StoneTransactionModel transaction;
   bool get isApproved => transaction.isApproved;
 
-  StoneStatusTransaction({
+  StoneStatusTechTransaction({
     required this.transaction,
   });
 }
 
-final class StoneQRCodeTransaction extends StoneStatus {
+final class StoneStatusTechQRCodeTransaction extends StoneStatusTech {
   final StoneTransactionModel transaction;
   String get qrCode => transaction.message ?? '';
   bool get isExpired => (transaction.errorMessage ?? '').contains('QRCODE_EXPIRED') || (transaction.message ?? '').contains('QRCODE_EXPIRED');
 
-  StoneQRCodeTransaction({
+  StoneStatusTechQRCodeTransaction({
     required this.transaction,
   });
 }
 
-final class StoneStatusActivate extends StoneStatus {
-  const StoneStatusActivate();
+final class StoneStatusTechActivate extends StoneStatusTech {
+  const StoneStatusTechActivate();
 }
 
-final class StoneStatusActivateRunning extends StoneStatus {
+final class StoneStatusTechActivateRunning extends StoneStatusTech {
   final String message;
-  const StoneStatusActivateRunning({required this.message});
+  const StoneStatusTechActivateRunning({required this.message});
 }
 
-final class StoneStatusActivateError extends StoneStatus {
+final class StoneStatusTechActivateError extends StoneStatusTech {
   final String message;
-  const StoneStatusActivateError({required this.message});
+  const StoneStatusTechActivateError({required this.message});
 }
 
-final class StonePrinterCustomer extends StoneStatus {
+final class StonePrinterCustomer extends StoneStatusTech {
   const StonePrinterCustomer();
 }
 
-final class StoneStatusCanceled extends StoneStatus {
+final class StoneStatusTechCanceled extends StoneStatusTech {
   final Map<String, dynamic> cancelExtraData;
 
-  const StoneStatusCanceled({required this.cancelExtraData});
+  const StoneStatusTechCanceled({required this.cancelExtraData});
 }
 
-final class StoneStatusPaymentOptions extends StoneStatus {
+final class StoneStatusTechPaymentOptions extends StoneStatusTech {
   final List<String> options;
   final String message;
 
-  const StoneStatusPaymentOptions({
+  const StoneStatusTechPaymentOptions({
     required this.options,
     required this.message,
   });

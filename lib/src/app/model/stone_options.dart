@@ -1,9 +1,9 @@
-class StoneOptions {
+class StoneTechOptions {
   final bool isPrinterEstablishment;
   final bool isPrinterCustomer;
   final bool isCustomerPrinterRequest;
 
-  StoneOptions({
+  StoneTechOptions({
     required this.isPrinterEstablishment,
     required this.isPrinterCustomer,
     required this.isCustomerPrinterRequest,

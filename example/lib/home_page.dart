@@ -11,9 +11,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  StonePaymentType? selectedPaymentType;
+  StoneTechPaymentType? selectedPaymentType;
 
-  void onChanged(StonePaymentType? value) {
+  void onChanged(StoneTechPaymentType? value) {
     if (!mounted) return;
     setState(() {
       selectedPaymentType = value;
@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
 
   void printerBase64() {
     StoneCustomPrinterController().initializeAndPrintBase64(
-      stoneCredentials: StoneCredentialsModel(stoneCode: '206192723', appName: 'Stone Payment Tech'),
+      stoneCredentials: StoneTechCredentialsModel(stoneCode: '206192723', appName: 'Stone Payment Tech'),
       onMessage: (message) {
         log('onMessage: $message');
       },
@@ -47,14 +47,14 @@ class _HomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            DropdownButton<StonePaymentType>(
+            DropdownButton<StoneTechPaymentType>(
               hint: const Text('Selecione o tipo de pagamento'),
               value: selectedPaymentType,
               items: [
-                DropdownMenuItem(value: StonePaymentType.debit, child: Text(StonePaymentType.debit.name)),
-                DropdownMenuItem(value: StonePaymentType.credit, child: Text(StonePaymentType.credit.name)),
-                DropdownMenuItem(value: StonePaymentType.pix, child: Text(StonePaymentType.pix.name)),
-                DropdownMenuItem(value: StonePaymentType.voucher, child: Text(StonePaymentType.voucher.name)),
+                DropdownMenuItem(value: StoneTechPaymentType.debit, child: Text(StoneTechPaymentType.debit.name)),
+                DropdownMenuItem(value: StoneTechPaymentType.credit, child: Text(StoneTechPaymentType.credit.name)),
+                DropdownMenuItem(value: StoneTechPaymentType.pix, child: Text(StoneTechPaymentType.pix.name)),
+                DropdownMenuItem(value: StoneTechPaymentType.voucher, child: Text(StoneTechPaymentType.voucher.name)),
               ],
               onChanged: onChanged,
             ),
@@ -70,10 +70,10 @@ class _HomePageState extends State<HomePage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => StoneStreamPage(
-                      stonePaymentParams: StonePaymentParams(
+                      stonePaymentParams: StoneTechPaymentParams(
                         amount: 0.99,
-                        type: selectedPaymentType ?? StonePaymentType.debit,
-                        credentials: StoneCredentialsModel(stoneCode: '206192723', appName: 'Stone Payment Tech'),
+                        type: selectedPaymentType ?? StoneTechPaymentType.debit,
+                        credentials: StoneTechCredentialsModel(stoneCode: '206192723', appName: 'Stone Payment Tech'),
                       ),
                     ),
                   ),
@@ -95,10 +95,10 @@ class _HomePageState extends State<HomePage> {
                   context: context,
                   builder: (context) {
                     return StoneStreamDialog(
-                      stonePaymentParams: StonePaymentParams(
+                      stonePaymentParams: StoneTechPaymentParams(
                         amount: 12,
-                        type: selectedPaymentType ?? StonePaymentType.debit,
-                        credentials: StoneCredentialsModel(stoneCode: '206192723', qrCodeAuthorization: '', qrCodeProviderid: '', appName: 'Stone Payment Tech'),
+                        type: selectedPaymentType ?? StoneTechPaymentType.debit,
+                        credentials: StoneTechCredentialsModel(stoneCode: '206192723', qrCodeAuthorization: '', qrCodeProviderid: '', appName: 'Stone Payment Tech'),
                       ),
                       onConfirmPayment: (transaction) {
                         log('***Response dialog: $transaction');
