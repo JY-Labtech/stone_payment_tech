@@ -7,7 +7,7 @@ import 'payments/payment.dart';
 class StoneTech {
   static const channelName = "stone_payment_tech";
   final MethodChannel _channel;
-  Payment? _payment;
+  StonePayment? _payment;
 
   static StoneTech? _instance;
   static bool isPinpadActivated = false;
@@ -20,14 +20,14 @@ class StoneTech {
   }
 
   /// Function to initialize payment and register the notification handler
-  Payment initPayment({
+  StonePayment initPayment({
     required IStoneHandler handler,
     IStoneTechHandler? iStoneTechHandler,
   }) {
     if (_payment != null) {
       return _payment!;
     }
-    _payment = Payment.create(
+    _payment = StonePayment.create(
       channel: _channel,
       paymentHandler: handler,
       iStoneTechHandler: iStoneTechHandler,
@@ -36,7 +36,7 @@ class StoneTech {
   }
 
   /// Get the Payment object. Note: It needs to be initialized.
-  Payment get payment {
+  StonePayment get payment {
     if (_payment == null) {
       throw "PAYMENT NEEDS TO BE INITIALIZED! \n TRY: StoneTech._instance.initPayment(handler)";
     }

@@ -12,10 +12,10 @@ class StonePrinterController {
   StonePrinterController({required this.handler});
 
   StoneTech get stone => StoneTech.I;
-  late StoneCredentialsModel credentials;
+  late StoneTechCredentialsModel credentials;
 
   Future<void> initialize({
-    required StoneCredentialsModel stoneCredentials,
+    required StoneTechCredentialsModel stoneCredentials,
     required Function(String) onMessage,
     required Function(bool) onPop,
     required Function() onSuccess,
@@ -51,22 +51,22 @@ class StonePrinterController {
     required Function() onSuccess,
   }) {
     handler.statusStream.listen((data) {
-      if (data is StoneStatusActivate) {
+      if (data is StoneStatusTechActivate) {
         // Terminal ativado - Prosseguir com impressão
         StoneTech.isPinpadActivated = true;
         onSuccess();
       }
 
-      if (data is StoneStatusActivateError) {
+      if (data is StoneStatusTechActivateError) {
         //Erro ao ativar terminal
         onMessage(data.message);
         onPop(false);
       }
-      if (data is StoneStatusActivateRunning) {
+      if (data is StoneStatusTechActivateRunning) {
         onMessage(data.message);
       }
 
-      if (data is StoneStatusMessage) {
+      if (data is StoneStatusTechMessage) {
         onMessage(data.message);
 
         if (data.message.toLowerCase().contains('erro')) {
@@ -80,7 +80,7 @@ class StonePrinterController {
     GlobalKey key, {
     required Function(String) onMessage,
     required Function(bool) onPop,
-    required StoneCredentialsModel stoneCredentials,
+    required StoneTechCredentialsModel stoneCredentials,
   }) async {
     try {
       credentials = stoneCredentials;

@@ -1,3 +1,16 @@
+## 2.2.0
+
+- Add novos getters para a classe StoneQRCodeTransaction
+  ⚠️ Breaking Changes:
+- Alterar classe Payment => StonePayment
+- Alterar casse StoneStatus => StoneStatusTech
+- Alterar classe StoneResponse => StoneTechResponse
+- Alterar classe StoneCredentialsModel => StoneTechCredentialsModel
+- Alterar classe StonePrinterHandler => StoneTechPrinterHandler
+- Alterar classe StoneOptions => StoneTechOptions
+- Alterar classe StonePaymentType => StoneTechPaymentType
+- Alterar classe StonePaymentParams => StoneTechPaymentParams
+
 ## 2.1.1
 
 - Add suporte automático para PaymentOptions

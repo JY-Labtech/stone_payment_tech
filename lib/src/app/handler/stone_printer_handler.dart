@@ -1,10 +1,10 @@
 import '../../interface/interface.dart';
 
-class StonePrinterHandler extends IStoneHandler {
+class StoneTechPrinterHandler extends IStoneHandler {
   final Function(String) onFinishedMonitor;
   final Function(String) onMessageMonitor;
 
-  StonePrinterHandler({
+  StoneTechPrinterHandler({
     required this.onFinishedMonitor,
     required this.onMessageMonitor,
   });

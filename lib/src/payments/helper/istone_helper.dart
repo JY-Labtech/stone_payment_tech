@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import '../../interface/interface.dart';
 
 abstract class IStoneHelper {
-  static StoneResponse convertToStoneResponse(String message) {
+  static StoneTechResponse convertToStoneTechResponse(String message) {
     if (message.contains('{')) {
       final map = json.decode(message);
-      return StoneResponse.fromMap(map);
+      return StoneTechResponse.fromMap(map);
     }
-    return StoneResponse(message: message);
+    return StoneTechResponse(message: message);
   }
 
   static StoneTransactionModel convertToStoneTransactionModel(String message) {
@@ -85,7 +85,7 @@ abstract class IStoneHelper {
         break;
       case PaymentTypeHandler.onError:
         {
-          iStoneTechHandler.onError(IStoneHelper.convertToStoneResponse(message));
+          iStoneTechHandler.onError(IStoneHelper.convertToStoneTechResponse(message));
         }
         break;
       case PaymentTypeHandler.onMessage:
@@ -100,7 +100,7 @@ abstract class IStoneHelper {
         break;
       case PaymentTypeHandler.onChanged:
         {
-          iStoneTechHandler.onChanged(IStoneHelper.convertToStoneResponse(message));
+          iStoneTechHandler.onChanged(IStoneHelper.convertToStoneTechResponse(message));
         }
         break;
       case PaymentTypeHandler.onLoading:
@@ -120,7 +120,7 @@ abstract class IStoneHelper {
         break;
       case PaymentTypeHandler.onAuthProgress:
         {
-          iStoneTechHandler.onAuthProgress(IStoneHelper.convertToStoneResponse(message));
+          iStoneTechHandler.onAuthProgress(IStoneHelper.convertToStoneTechResponse(message));
         }
         break;
       case PaymentTypeHandler.onTransactionInfo:

@@ -1,16 +1,16 @@
 import 'package:stone_payment_tech/src/app/model/stone_credentials.dart';
 import 'package:stone_payment_tech/src/app/model/stone_options.dart';
 
-enum StonePaymentType { credit, creditParc, debit, voucher, pix }
+enum StoneTechPaymentType { credit, creditParc, debit, voucher, pix }
 
-class StonePaymentParams {
+class StoneTechPaymentParams {
   final double amount;
-  final StonePaymentType type;
+  final StoneTechPaymentType type;
   final int? installments;
-  final StoneCredentialsModel credentials;
-  final StoneOptions? options;
+  final StoneTechCredentialsModel credentials;
+  final StoneTechOptions? options;
 
-  StonePaymentParams({
+  StoneTechPaymentParams({
     required this.amount,
     required this.type,
     required this.credentials,

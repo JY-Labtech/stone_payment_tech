@@ -7,12 +7,12 @@ import 'package:stone_payment_tech/src/interface/handler/istone_handler.dart';
 import 'package:stone_payment_tech/src/interface/model/stone_transaction_model.dart';
 
 class StoneStreamHandler extends IStoneHandler {
-  final _controller = StreamController<StoneStatus>.broadcast();
-  StoneStatus? lastStatus;
+  final _controller = StreamController<StoneStatusTech>.broadcast();
+  StoneStatusTech? lastStatus;
 
   StoneStreamHandler();
 
-  Stream<StoneStatus> get statusStream => _controller.stream;
+  Stream<StoneStatusTech> get statusStream => _controller.stream;
 
   void clear() {
     lastStatus = null;
@@ -23,22 +23,22 @@ class StoneStreamHandler extends IStoneHandler {
   }
 
   void setStatus(String message) {
-    if (lastStatus is StoneStatusTransaction) {
+    if (lastStatus is StoneStatusTechTransaction) {
       return;
     }
-    lastStatus = StoneStatusMessage(message: message);
+    lastStatus = StoneStatusTechMessage(message: message);
     _emit(lastStatus!);
   }
 
-  void setStreamStatus(StoneStatus status) {
-    if (lastStatus is StoneStatusTransaction) {
+  void setStreamStatus(StoneStatusTech status) {
+    if (lastStatus is StoneStatusTechTransaction) {
       return;
     }
     lastStatus = status;
     _emit(lastStatus!);
   }
 
-  void _emit(StoneStatus status) {
+  void _emit(StoneStatusTech status) {
     if (!_controller.isClosed) {
       _controller.add(status);
     }
@@ -88,42 +88,42 @@ class StoneStreamHandler extends IStoneHandler {
           case 'licence':
             String errorMessage = (map['errorMessage'] ?? '').toString();
             final messageFlow = map['message'] as String? ?? '';
-            lastStatus = StoneStatusActivateRunning(message: messageFlow);
+            lastStatus = StoneStatusTechActivateRunning(message: messageFlow);
             final resultLicence = int.tryParse((map['result'] ?? '').toString()) ?? 999999;
 
             if (resultLicence != 0 || errorMessage.toLowerCase().contains('erro')) {
               if (errorMessage.isEmpty) {
                 errorMessage = 'Erro ao validar a licença';
               }
-              lastStatus = StoneStatusActivateError(message: errorMessage);
+              lastStatus = StoneStatusTechActivateError(message: errorMessage);
             }
 
             _emit(lastStatus!);
           case 'active':
             final message = (map['message'] ?? '').toString().toLowerCase();
             if (message.contains('terminal ativado')) {
-              lastStatus = const StoneStatusActivate();
+              lastStatus = const StoneStatusTechActivate();
             } else if (message.contains('licença ativada')) {
               // Ignorar mensagem de licença ativada durante o fluxo de ativação do terminal
               // Esta mensagem vem do checkValidLicence e não deve interferir no fluxo
               return;
             } else {
-              lastStatus = StoneStatusActivateError(message: map['message'] ?? 'Erro ao ativar o terminal');
+              lastStatus = StoneStatusTechActivateError(message: map['message'] ?? 'Erro ao ativar o terminal');
             }
             _emit(lastStatus!);
             return;
           case 'cancel':
-            lastStatus = StoneStatusCanceled(cancelExtraData: map);
+            lastStatus = StoneStatusTechCanceled(cancelExtraData: map);
             _emit(lastStatus!);
             return;
           case 'transaction':
             final transaction = StoneTransactionModel.fromMap(map);
-            lastStatus = StoneStatusTransaction(transaction: transaction);
+            lastStatus = StoneStatusTechTransaction(transaction: transaction);
             _emit(lastStatus!);
             return;
           case 'QRCode':
             final transaction = StoneTransactionModel.fromMap(map);
-            lastStatus = StoneQRCodeTransaction(transaction: transaction);
+            lastStatus = StoneStatusTechQRCodeTransaction(transaction: transaction);
             _emit(lastStatus!);
             return;
           case 'printerTransaction':
@@ -134,7 +134,7 @@ class StoneStreamHandler extends IStoneHandler {
             final optionsList = map['options'] as List<dynamic>?;
             final options = optionsList?.map((e) => e.toString()).toList() ?? <String>[];
             final message = (map['message'] ?? '').toString();
-            lastStatus = StoneStatusPaymentOptions(options: options, message: message);
+            lastStatus = StoneStatusTechPaymentOptions(options: options, message: message);
             _emit(lastStatus!);
             return;
         }
