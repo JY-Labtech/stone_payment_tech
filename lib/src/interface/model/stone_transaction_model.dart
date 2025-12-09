@@ -27,7 +27,7 @@ class StoneTransactionModel {
   final String? authorizationCode;
   final String? actionResultMessage;
 
-  bool get isAproved => messageFromAuthorize?.toLowerCase() == 'aprovado';
+  bool get isApproved => messageFromAuthorize?.toLowerCase() == 'aprovado' || transactionStatus?.toUpperCase() == 'APPROVED';
 
   StoneTransactionModel({
     required this.actionCode,

@@ -183,7 +183,7 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                               if (data.transaction.errorMessage?.contains('QRCODE_EXPIRED') == true) {
                                 setBlockPop(false);
                               }
-                              if (data.transaction.isAproved && !stoneController.isFinishPayment) {
+                              if (data.transaction.isApproved && !stoneController.isFinishPayment) {
                                 stoneController.isFinishPayment = true;
                                 _timerPop = Timer(const Duration(minutes: 3), () {
                                   _popWithResult(data.transaction);
@@ -231,7 +231,7 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                                 );
                               }
 
-                              if (!data.transaction.isAproved && (data.transaction.transactionStatus != '' && data.transaction.transactionStatus != null)) {
+                              if (!data.transaction.isApproved && (data.transaction.transactionStatus != '' && data.transaction.transactionStatus != null)) {
                                 _error(data.transaction);
                               }
 
