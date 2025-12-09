@@ -22,6 +22,7 @@ final class StoneStatusMessage extends StoneStatus {
 
 final class StoneStatusTransaction extends StoneStatus {
   final StoneTransactionModel transaction;
+  bool get isApproved => transaction.isApproved;
 
   StoneStatusTransaction({
     required this.transaction,
@@ -30,6 +31,8 @@ final class StoneStatusTransaction extends StoneStatus {
 
 final class StoneQRCodeTransaction extends StoneStatus {
   final StoneTransactionModel transaction;
+  String get qrCode => transaction.message ?? '';
+  bool get isExpired => (transaction.errorMessage ?? '').contains('QRCODE_EXPIRED') || (transaction.message ?? '').contains('QRCODE_EXPIRED');
 
   StoneQRCodeTransaction({
     required this.transaction,

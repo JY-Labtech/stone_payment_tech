@@ -1,3 +1,11 @@
+## 2.1.1
+
+- Add suporte automático para PaymentOptions
+- Implementado fluxo automático de seleção de tipo de cartão (alimentação/refeição) em StoneStreamPage e StoneStreamDialog
+- Quando recebe method = "PaymentOptions", o plugin automaticamente exibe um dialog com as opções disponíveis
+- Após seleção do usuário, a opção é enviada automaticamente via setPaymentOption
+- Add novos getters para a classe StoneQRCodeTransaction
+
 ## 2.1.0
 
 - Add suporte automático para PaymentOptions
