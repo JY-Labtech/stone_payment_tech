@@ -196,7 +196,6 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                                     _text('Deseja imprimir via do cliente?', isLoading: false),
                                     const SizedBox(height: 5),
                                     Row(
-                                      spacing: 5,
                                       children: [
                                         Expanded(
                                           child: ElevatedButton(
@@ -212,6 +211,7 @@ class _StoneStreamPageState extends State<StoneStreamPage> {
                                             ),
                                           ),
                                         ),
+                                        const SizedBox(width: 5),
                                         Expanded(
                                           child: ElevatedButton(
                                             style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
