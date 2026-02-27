@@ -4,6 +4,12 @@
     android:versionName="1.0.0">
 
 
+    <!-- Permissões necessárias para o pleno funcionamento do aplicativo e da SDK -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="Stone example"

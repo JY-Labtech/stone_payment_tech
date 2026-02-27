@@ -113,16 +113,16 @@ licenceInternalKey=aHR0cHM6Ly9wb3MtcGF5bWVudHMtYXBpLTU3NzQ2NDIzNTQwOC5zb3V0aGFtZ
 
 ```gradle
 // Gradle
-gradle-8.12
+gradle-8.14.3
 
 // Kotlin
 kotlin_version = '2.1.21'
 
 // Stone SDK
-stone_sdk_version = '4.13.0'
+stone_sdk_version = '4.15.0'
 
 // Android Gradle Plugin
-classpath 'com.android.tools.build:gradle:8.12.1'
+classpath 'com.android.tools.build:gradle:8.13.0'
 
 // SDK Versions
 compileSdk = 35
@@ -458,6 +458,7 @@ Quando uma transação requer seleção do tipo de cartão (alimentação/refei�
 ```
 
 **Comportamento automático:**
+
 - Ao usar `StoneStreamPage` ou `StoneStreamDialog`, o plugin automaticamente:
   1. Detecta quando `method = "PaymentOptions"` é recebido
   2. Exibe um dialog com as opções disponíveis
@@ -475,10 +476,10 @@ Future<void> onFinishedResponse(String message) async {
   if (map['method'] == 'PaymentOptions') {
     final options = List<String>.from(map['options'] ?? []);
     final messageText = map['message'] ?? '';
-    
+
     // Exibir dialog customizado e aguardar seleção
     final selectedOption = await showDialog<String>(...);
-    
+
     if (selectedOption != null) {
       await StoneTech.I.payment.setPaymentOption(option: selectedOption);
     }
@@ -524,10 +525,10 @@ void onFinishedResponseMonitor(StoneTransaction? stoneTransaction) {
       // - method: "PaymentOptions"
       // - options: List<String> com as opções disponíveis (ex: ["Cartão Alimentação", "Cartão Refeição"])
       // - message: String com mensagem informativa
-      // 
+      //
       // O plugin automaticamente exibe um dialog para o usuário selecionar uma opção.
       // Após a seleção, a opção é enviada automaticamente via setPaymentOption.
-      // 
+      //
       // Se estiver usando StoneStreamPage ou StoneStreamDialog, o fluxo é automático.
       // Para implementação manual, use:
       // await StoneTech.I.payment.setPaymentOption(option: opcaoSelecionada);

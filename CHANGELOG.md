@@ -1,3 +1,7 @@
+## 3.0.0
+
+- Update Stone SDK version 4.15.0
+
 ## 2.2.1
 
 - Add novos getters para a classe StoneQRCodeTransaction
