@@ -45,6 +45,10 @@ android {
             dimension "model"
             versionNameSuffix "-sunmi"
         }
+        sunmiSeriesP {
+            dimension "model"
+            versionNameSuffix "-sunmiSeriesP"
+        }
         tectoySeriesT {
             dimension "model"
             versionNameSuffix "-tectoySeriesT"
@@ -74,6 +78,8 @@ android {
 
      buildTypes {
         debug{
+            shrinkResources false
+            minifyEnabled false
             signingConfig signingConfigs.positivo
         }
         profile{
