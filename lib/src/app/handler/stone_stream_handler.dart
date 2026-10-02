@@ -99,6 +99,7 @@ class StoneStreamHandler extends IStoneHandler {
             }
 
             _emit(lastStatus!);
+            return;
           case 'active':
             final message = (map['message'] ?? '').toString().toLowerCase();
             if (message.contains('terminal ativado')) {
@@ -108,7 +109,9 @@ class StoneStreamHandler extends IStoneHandler {
               // Esta mensagem vem do checkValidLicence e não deve interferir no fluxo
               return;
             } else {
-              lastStatus = StoneStatusTechActivateError(message: map['message'] ?? 'Erro ao ativar o terminal');
+              // Nos erros o nativo envia errorMessage (message vem nula).
+              final error = (map['errorMessage'] ?? map['message'] ?? '').toString();
+              lastStatus = StoneStatusTechActivateError(message: error.isEmpty ? 'Erro ao ativar o terminal' : error);
             }
             _emit(lastStatus!);
             return;

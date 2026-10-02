@@ -14,6 +14,7 @@
   <a href="#requisitos">Requisitos e Configurações</a> •
   <a href="#tecnologias">Tecnologias</a> •
   <a href="#instalacao">Instalação</a> •
+  <a href="#licenca">Licenciamento</a> •
   <a href="#flavors">Configuração de Flavors</a> •
   <a href="#uso">Uso</a> •
   <a href="#respostas">Modelo de Resposta</a> •
@@ -42,7 +43,7 @@ Para utilizar este plugin corretamente, seu projeto precisa atender aos seguinte
 | Gradle Wrapper        | 8.12          | 8.12+       |
 | Kotlin                | 2.1.21        | 2.1.21+     |
 | Android Gradle Plugin | 8.12.1        | 8.12.1+     |
-| Stone SDK             | 4.13.0        | 4.13.0      |
+| Stone SDK             | 4.15.0        | 4.15.0      |
 | Java (compilação)     | 11            | 11+         |
 
 ### Configuração do Android SDK
@@ -100,8 +101,9 @@ Na raiz da pasta `android/`, crie ou edite o arquivo `local.properties` e adicio
 sdk.dir=/caminho/para/seu/Android/sdk
 flutter.sdk=/caminho/para/seu/flutter/sdk
 licenceKey=<sua_licenca_jylabtech>
-licenceInternalKey=***REMOVIDO***
 ```
+
+> As chaves de licença são lidas em tempo de build (`local.properties` da pasta `android/` do seu app ou variáveis de ambiente `LICENCE_KEY` / `LICENCE_INTERNAL_KEY`). O `licenceInternalKey` é opcional. Veja a seção [Licenciamento](#licenca).
 
 > ⚠️ **Importante:**
 >
@@ -130,27 +132,69 @@ targetSdk = 35
 minSdk = 23
 ```
 
-## 🔐 Licenciamento
+## 🔐 <a name="licenca">Licenciamento</a>
 
-Para adquirir uma licença, cadastre-se no site [Licença JY Labtech](https://licenca.jylabtech.com.br).  
-Cada licença é válida por terminal. Após a compra, será gerada uma chave `licenceKey` vinculada ao terminal.
+O plugin exige uma licença da JY Labtech válida e ativa. Ela é conferida antes de **toda** chamada ao nativo (pagamentos, cancelamento, estorno, impressões, ativação do pinpad, consultas etc.). Sem licença válida, nenhuma operação chega ao SDK da Stone.
 
-### Inicialização com licença
+### Onde adquirir
 
-##### Obervação: A partir da versão 1.0.0 não é mais necessário passar o `licenceKey` como parâmetro.
+Cadastre-se ou entre no portal **[portal.jylabtech.com.br](https://portal.jylabtech.com.br)** (mesmo e-mail e senha do portal anterior). Lá você adquire e gerencia as licenças, acompanha os aparelhos vinculados e pode desativá-los.
+
+- O produto é único, **"Licença plugin de pagamento"**, e vale para qualquer plugin de pagamento da JY Labtech.
+- **Plano `debug` (cortesia):** concedido automaticamente no cadastro, válido por 365 dias e para até 2 aparelhos. Ideal para desenvolvimento e homologação.
+- **Plano `mensal`:** cobrado por dispositivo. Cada aparelho que valida a licença ocupa uma vaga; ao atingir o limite, novos aparelhos são recusados até que você libere vagas (desativando aparelhos no portal) ou amplie a licença.
+- **As chaves de licença existentes continuam valendo**, com os mesmos valores. Chaves novas no formato `JYL-...` também funcionam.
+
+### Configurando as chaves
+
+A partir da versão 1.0.0 a licença não é mais passada por parâmetro em Dart: ela é embutida no build Android. Adicione no `local.properties` da pasta `android/` do seu app:
+
+```properties
+licenceKey=<sua_licenca>
+```
+
+Ou, em CI, use a variável de ambiente `LICENCE_KEY` (ela tem prioridade sobre o `local.properties`). Sem a chave o build falha com `LicenceKey não encontrado!!`.
+
+- `licenceKey`: a chave da licença obtida no portal.
+- `licenceInternalKey` (**opcional**, `local.properties` ou `LICENCE_INTERNAL_KEY`): desde a 3.1.0 o plugin **sempre** valida no servidor oficial da JY Labtech (`https://licence-server.invalid/pos-payments/licence/check`). Se informado, só é aceito quando aponta para esse servidor (base64 ou URL em texto puro, `https`, incluindo as rotas `/licence/check/invoice` e `/licence/check/subscription`). Qualquer outro valor é ignorado e o servidor oficial é usado, **inclusive o valor antigo** (`***REMOVIDO***...`). Pode remover a linha do seu `local.properties`.
+
+Depois é só inicializar o plugin normalmente; a licença é validada automaticamente a cada chamada ao nativo:
 
 ```dart
-await StonePaymentTech.initPayment(
-  handler: controller,
-);
+StoneTech.I.initPayment(handler: meuHandler);
 ```
 
-A partir da versão 1.0.0 é necessário adicionar as chaves no seu arquivo `local.properties` na raiz da pasta `android`.
+O resultado da validação chega no handler com `method: "licence"` (`result == 0` para licença ativa; caso contrário `errorMessage` traz o motivo).
 
-```
-licenceKey=<sua_licenca>
-licenceInternalKey=***REMOVIDO***
-```
+**Licença inválida, vencida, suspensa ou cancelada bloqueia a operação:** a chamada nativa falha com `PlatformException(code: 'LICENCE_ERROR', message: <motivo>)` e o SDK da Stone não é chamado. Os métodos que retornam `bool` com tratamento interno (`activePinpad`, `activePinpadWithCredentials`, `reversal`, `customPrinter`, `printFromBase64`, `printWrapPaper`) devolvem `false`; os demais (pagamentos, cancelamento, impressões de comprovante, consultas, abort) propagam a `PlatformException`. No `StoneStreamController`, o erro aparece como `StoneStatusTechActivateError`.
+
+### Identificação do aparelho e cache offline
+
+- O aparelho é identificado pelo `ANDROID_ID` (identificador principal) e, quando disponível, pelo número de série.
+- Só uma resposta HTTP 200 com licença **válida e ativa** (`expiredAt` no futuro, sem `isExpired`, `isInactive` ou `isCanceled`) libera o uso. Qualquer outra resposta, timeout ou falha de rede é erro.
+- Após uma validação online bem-sucedida, a licença fica guardada **criptografada** no aparelho e é usada offline até o vencimento (`expiredAt`), por **no máximo 7 dias** sem nova consulta ao servidor. O cache é descartado se a chave mudar, se tiver sido validado em outro servidor ou se o relógio do aparelho estiver adiantado/atrasado em relação à data salva. Depois disso o aparelho precisa de internet para revalidar.
+- A validação online roda em background (timeout de 15 s), sem travar a interface.
+- Se o servidor confirmar a licença válida e ativa mas o aparelho não conseguir salvar o cache (falha do EncryptedSharedPreferences/Keystore), a operação é liberada mesmo assim; o erro é registrado no log e a próxima operação revalida online.
+
+### Erros de licença
+
+| HTTP | Situação                                              | O que fazer                                                                 |
+| ---- | ----------------------------------------------------- | --------------------------------------------------------------------------- |
+| 404  | Licença não encontrada                                | Confira o `licenceKey` (sem espaços) no portal.                             |
+| 412  | Limite de aparelhos atingido ou aparelho desativado   | Libere/reative aparelhos no portal ou amplie a licença.                     |
+| 428  | Licença vencida, suspensa ou cancelada                | Regularize o pagamento ou renove a licença no portal.                       |
+| 403  | Requisição sem token de licença                       | `licenceKey` vazio no build; confira o `local.properties`/variáveis de CI.   |
+| 400  | Aparelho sem identificador estável                    | O aparelho não informou `ANDROID_ID`; verifique o ambiente do terminal.     |
+| 429  | Muitas tentativas (rate limit)                        | Aguarde alguns instantes e tente novamente.                                 |
+
+A mensagem exibida (`errorMessage`) é a retornada pelo servidor. Falhas de rede geram mensagens como "Sem conexão com a internet..." ou "Tempo esgotado ao conectar no servidor de licença...".
+
+### Troubleshooting
+
+- **`LICENCE_ERROR`**: a validação falhou; veja a `message` da exceção (ou o `errorMessage` do evento `licence`) e a tabela acima.
+- **Funciona no debug mas não no aparelho novo**: verifique o limite de aparelhos da licença (o plano `debug` permite 2).
+- **Trocou a chave e nada mudou**: as chaves são embutidas no build; rode `flutter clean` e gere o app novamente.
+- **Sem internet**: o aparelho só funciona offline se tiver validado online nos últimos 7 dias e a licença não tiver vencido.
 
 ### ✅ Máquinas compatíveis
 
@@ -168,7 +212,7 @@ licenceInternalKey=***REMOVIDO***
 ## 🚀 <a name="tecnologias">Tecnologias</a>
 
 - [Flutter](https://flutter.dev/)
-- SDK Stone `4.13.0`
+- SDK Stone `4.15.0`
 - Comunicação via Platform Channels
 
 ---
@@ -181,8 +225,16 @@ Adicione a dependência:
 
 ```yaml
 dependencies:
-  stone_payment_tech: any
+  stone_payment_tech: ^3.1.0
 ```
+
+E importe a biblioteca principal:
+
+```dart
+import 'package:stone_payment_tech/stone_payment_tech.dart';
+```
+
+> O import antigo `package:stone_payment_tech/stone_tech_payment.dart` continua funcionando (exporta a mesma API), mas prefira o novo.
 
 ### 2. `build.gradle`
 
@@ -270,7 +322,7 @@ Crie uma classe que estenda `IStoneHandler`. Essa será responsável por monitor
 
 ```dart
 class StoneHandler extends IStoneHandler {
-  final Function(StoneTransaction?)? onTransaction;
+  final Function(StoneTransactionModel?)? onTransaction;
   final Function(String)? onMessageMonitor;
 
   StoneHandler({this.onTransaction, this.onMessageMonitor});
@@ -294,32 +346,55 @@ class StoneHandler extends IStoneHandler {
 
 ### Iniciando uma transação
 
+Inicialize o plugin com o seu handler:
+
+```dart
+StoneTech.I.initPayment(handler: StoneHandler());
+```
+
 Ative primeiro o pinpad com seu StoneCode:
 
 ```dart
-StoneTech.I.payment.activePinpad(stoneCode: '12345');
+StoneTech.I.payment.activePinpad(appName: 'nome_do_seu_app', stoneCode: '12345');
 ```
 
-Após ativar, você pode iniciar uma das transações disponíveis:
+Após ativar, você pode iniciar uma das transações disponíveis (valores em **centavos**):
 
 ```dart
-StoneTech.I.payment.creditPayment(12.50);
-StoneTech.I.payment.creditPaymentParc(value: 12.50, installment: 2);
-StoneTech.I.payment.debitPayment(12.50);
-StoneTech.I.payment.voucherPayment(12.50);
+StoneTech.I.payment.creditPayment(1250);
+StoneTech.I.payment.creditPaymentParc(value: 1250, installment: 2);
+StoneTech.I.payment.debitPayment(1250);
+StoneTech.I.payment.voucherPayment(1250);
 StoneTech.I.payment.pixPayment(
   amount: 1250,
-  qrCodeAuthorization: '',
+  qrCodeAuthroization: '',
   qrCodeProviderid: '',
 );
-StoneTech.I.payment.cancelTransaction(
-  amount: 12.50,
-  transactionType: PaymentTypeTransaction.CREDIT,
-);
+StoneTech.I.payment.cancelTransaction(idFromBase: 1);
 StoneTech.I.payment.abortTransaction();
 ```
 
 > 🔖 **Obs:** o SDK imprime automaticamente a via do consumidor.
+
+### Retorno dos métodos
+
+Todos os métodos do `StoneTech.I.payment` completam o `Future` (desde a 3.1.0; antes, em caso de sucesso, a maioria ficava pendente para sempre):
+
+- **Pagamentos, ativação, estorno, cancelamento, abort, impressões e consultas** completam com `true` assim que a operação é **disparada** no SDK da Stone. O resultado da operação (aprovada/negada, terminal ativado, impressão concluída etc.) continua chegando pelos callbacks do `IStoneHandler` / `StoneStreamHandler`, como antes. Portanto, `true` **não** significa transação aprovada.
+- `getPosSerialNumber()` e `getPosManufacture()` completam com o valor.
+- Licença inválida: `PlatformException(code: 'LICENCE_ERROR')`. Falha ao disparar a operação: `PlatformException(code: 'ERROR')`. Os métodos que já tratavam exceção (`activePinpad`, `activePinpadWithCredentials`, `reversal`, `customPrinter`, `printFromBase64`, `printWrapPaper`) devolvem `false`.
+
+Se o seu app fazia `await` em um desses métodos sem esperar retorno (ou usava `then`/`timeout` como contorno), revise o fluxo: o código após o `await` agora roda logo após o disparo.
+
+Para só conferir a licença (sem chamar o SDK da Stone), use `await StoneTech.I.payment.checkLicence()`: `true` com licença válida; `PlatformException(code: 'LICENCE_ERROR')` caso contrário.
+
+Comportamentos corrigidos na 3.1.0 que podem aparecer no app:
+
+- `printerCurrentTransaction(printCustomerSlip: false)` não imprime mais a via do cliente (antes o argumento era ignorado e a via saía mesmo quando o usuário recusava).
+- `getAllTransactions()` volta a responder em `onFinishedResponse` (`method: AllTransactions`, lista `stoneTransactions`); antes sempre falhava.
+- Imagens em `customPrinter` (`PrinterType.image`) passam a ser impressas.
+- O `IStoneTechHandler` informado em `initPayment` passa a receber os eventos (antes nunca recebia) e é mantido após `setHandler`.
+- O evento `onChanged` (QRCode do PIX e opções Alimentação/Refeição) chega ao `IStoneHandler.onChanged`.
 
 ### Implementação de página
 
@@ -330,10 +405,10 @@ Abaixo segue um exemplo usando uma tela pré montada, onde você deve passar os 
   context,
   MaterialPageRoute(
     builder: (context) => StoneStreamPage(
-      stonePaymentParams: StonePaymentParams(
+      stonePaymentParams: StoneTechPaymentParams(
         amount: 15,
-        type: StonePaymentType.debit,
-        credentials: StoneCredentialsModel(
+        type: StoneTechPaymentType.debit,
+        credentials: StoneTechCredentialsModel(
           stoneCode: 'StoneCode',
           appName: 'nome_do_seu_app',
         ),
@@ -352,10 +427,10 @@ await showDialog(
   context: context,
   builder: (context) {
     return StoneStreamDialog(
-      stonePaymentParams: StonePaymentParams(
+      stonePaymentParams: StoneTechPaymentParams(
         amount: 15,
-        type: StonePaymentType.debit,
-        credentials: StoneCredentialsModel(
+        type: StoneTechPaymentType.debit,
+        credentials: StoneTechCredentialsModel(
           stoneCode: 'StoneCode',
           appName: 'nome_do_seu_app',
         ),
@@ -374,11 +449,13 @@ await showDialog(
   context,
   MaterialPageRoute(
     builder: (context) => StonePrinterPage(
-      credentials: StoneCredentialsModel(
+      params: StonePrinterPageParams(
+        credentials: StoneTechCredentialsModel(
           stoneCode: 'StoneCode',
           appName: 'nome_do_seu_app',
         ),
-        child: <Seu widget montando seu layout para impressão>
+        child: <Seu widget montando seu layout para impressão>,
+      ),
     ),
   ),
 );
@@ -402,6 +479,8 @@ Caso queira passar um estilo diferente para o `StoneStreamDialog` ou para `Stone
 | `onMessage`             | Mensagem bruta vinda da Stone           |
 | `onFinishedResponse`    | Resultado final da transação            |
 | `onTransactionSuccess`  | Sucesso da transação                    |
+| `onChanged`             | QRCode do PIX e opções Alimentação/Refeição (JSON com `method`) |
+| `onLoading`             | Indicador de carregamento               |
 
 ---
 
@@ -489,6 +568,23 @@ Future<void> onFinishedResponse(String message) async {
 
 ---
 
+## 🧪 Testes
+
+```bash
+# Testes Dart (canal mockado): todos os métodos públicos (método/argumentos enviados,
+# sucesso, ERROR e LICENCE_ERROR), eventos do nativo, modelos, stream e controller
+flutter test
+
+# Testes JVM do nativo: gate de licença por método, despacho/argumentos de cada método
+# do canal, resposta única, mapeamentos do SDK, parser de impressão e JSON enviado ao Dart.
+# Requer o example configurado (local.properties com licenceKey). Use JDK 17.
+cd example/android
+./gradlew :stone_payment_tech:testSunmiDebugUnitTest
+# (qualquer flavor serve, ex.: testGertecGposSeries7DebugUnitTest)
+```
+
+A análise técnica completa (tabela por método, bugs e otimizações) fica em `doc/ANALISE.md` no repositório (não vai para o pub.dev).
+
 ## ❗ Observações importantes
 
 - Para transações PIX, forneça `qrCodeAuthorization` e `qrCodeProviderid`.
@@ -503,7 +599,7 @@ Future<void> onFinishedResponse(String message) async {
 A resposta **mais completa** da SDK Stone virá sempre no método `onFinishedResponse`. Use o campo `method` da resposta para identificar o tipo de evento:
 
 ```dart
-void onFinishedResponseMonitor(StoneTransaction? stoneTransaction) {
+void onFinishedResponseMonitor(StoneTransactionModel? stoneTransaction) {
   switch (stoneTransaction?.method) {
     case 'licence':
     //se result vier == 0, licença ativada, do contrário o objeto "errorMessage" irá trazer a descrição do erro.

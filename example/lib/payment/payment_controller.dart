@@ -1,4 +1,4 @@
-import 'package:stone_payment_tech/stone_tech_payment.dart';
+import 'package:stone_payment_tech/stone_payment_tech.dart';
 
 class PaymentController extends IStoneHandler {
   int saleValue = 0;

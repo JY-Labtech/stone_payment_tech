@@ -6,138 +6,131 @@ import '../../interface/interface.dart';
 
 abstract class IStoneHelper {
   static StoneTechResponse convertToStoneTechResponse(String message) {
-    if (message.contains('{')) {
-      final map = json.decode(message);
+    final map = _decodeMap(message);
+    if (map != null) {
       return StoneTechResponse.fromMap(map);
     }
     return StoneTechResponse(message: message);
   }
 
   static StoneTransactionModel convertToStoneTransactionModel(String message) {
-    if (message.contains('{')) {
-      final map = json.decode(message);
+    final map = _decodeMap(message);
+    if (map != null) {
       return StoneTransactionModel.fromMap(map);
     }
     return StoneTransactionModel.toError(message);
   }
 
+  /// JSON do nativo ou `null` se a mensagem for texto simples/JSON inválido.
+  static Map<String, dynamic>? _decodeMap(String message) {
+    if (!message.contains('{')) return null;
+    try {
+      final decoded = json.decode(message);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _asString(dynamic value) => value?.toString() ?? '';
+
   static Future<dynamic> callHandler({required MethodCall call, required IStoneHandler iStoneHandler, IStoneTechHandler? stoneTechHandler, required Function(StoneTransactionModel) onTransaction}) async {
-    switch (call.method.handler) {
+    final PaymentTypeHandler type;
+    try {
+      type = call.method.handler;
+    } catch (_) {
+      throw MissingPluginException('Método não implementado: ${call.method}');
+    }
+    final arguments = call.arguments;
+    switch (type) {
       case PaymentTypeHandler.onTransactionSuccess:
-        {
-          iStoneHandler.onTransactionSuccess();
-          _stSmartHandler(message: call.arguments, iStoneTechHandler: stoneTechHandler);
-        }
+        await iStoneHandler.onTransactionSuccess();
         break;
       case PaymentTypeHandler.onError:
-        {
-          iStoneHandler.onError(call.arguments);
-          _stSmartHandler(message: call.arguments, iStoneTechHandler: stoneTechHandler);
-        }
+        await iStoneHandler.onError(_asString(arguments));
         break;
       case PaymentTypeHandler.onMessage:
-        {
-          iStoneHandler.onMessage(call.arguments);
-          _stSmartHandler(message: call.arguments, iStoneTechHandler: stoneTechHandler);
-        }
+        await iStoneHandler.onMessage(_asString(arguments));
         break;
       case PaymentTypeHandler.onFinishedResponse:
-        {
-          iStoneHandler.onFinishedResponse(call.arguments);
-          final model = _getTransactionModel(call.arguments);
-          if (model != null) {
-            onTransaction(model);
-          }
-          _stSmartHandler(message: call.arguments, iStoneTechHandler: stoneTechHandler);
+        await iStoneHandler.onFinishedResponse(_asString(arguments));
+        final model = _getTransactionModel(arguments);
+        if (model != null) {
+          onTransaction(model);
         }
         break;
       case PaymentTypeHandler.onChanged:
-        {
-          iStoneHandler.onChanged(call.arguments);
-          _stSmartHandler(message: call.arguments, iStoneTechHandler: stoneTechHandler);
-        }
+        await iStoneHandler.onChanged(_asString(arguments));
         break;
       case PaymentTypeHandler.onLoading:
-        {
-          iStoneHandler.onLoading(call.arguments);
-          _stSmartHandler(message: call.arguments, iStoneTechHandler: stoneTechHandler);
-        }
+        await iStoneHandler.onLoading(arguments == true);
         break;
       case PaymentTypeHandler.onAuthProgress:
-        {
-          iStoneHandler.onAuthProgress(call.arguments);
-          _stSmartHandler(message: call.arguments, iStoneTechHandler: stoneTechHandler);
-        }
+        await iStoneHandler.onAuthProgress(_asString(arguments));
         break;
       default:
-        throw "METHOD NOT IMPLEMENTED";
+        // writeToFile, onAbortedSuccessfully, onTransactionInfo: só o IStoneTechHandler trata.
+        if (stoneTechHandler == null) {
+          throw MissingPluginException('Método não implementado: ${call.method}');
+        }
     }
+    _stSmartHandler(type: type, message: arguments, iStoneTechHandler: stoneTechHandler);
     return true;
   }
 
-  static void _stSmartHandler({required dynamic message, IStoneTechHandler? iStoneTechHandler}) {
+  /// Repassa o evento ao [IStoneTechHandler] já convertido em modelo.
+  ///
+  /// Antes o tipo do evento era lido do conteúdo da mensagem (e não do nome do
+  /// método do canal), então o IStoneTechHandler nunca recebia os eventos.
+  static void _stSmartHandler({required PaymentTypeHandler type, required dynamic message, IStoneTechHandler? iStoneTechHandler}) {
     if (iStoneTechHandler == null) return;
-    switch (message.handler) {
+    switch (type) {
       case PaymentTypeHandler.onTransactionSuccess:
-        {
-          iStoneTechHandler.onTransactionSuccess();
-        }
+        iStoneTechHandler.onTransactionSuccess();
         break;
       case PaymentTypeHandler.onError:
-        {
-          iStoneTechHandler.onError(IStoneHelper.convertToStoneTechResponse(message));
-        }
+        iStoneTechHandler.onError(IStoneHelper.convertToStoneTechResponse(_asString(message)));
         break;
       case PaymentTypeHandler.onMessage:
-        {
-          iStoneTechHandler.onMessage(message);
-        }
+        iStoneTechHandler.onMessage(_asString(message));
         break;
       case PaymentTypeHandler.onFinishedResponse:
-        {
-          iStoneTechHandler.onFinishedResponse(IStoneHelper.convertToStoneTransactionModel(message));
-        }
+        iStoneTechHandler.onFinishedResponse(IStoneHelper.convertToStoneTransactionModel(_asString(message)));
         break;
       case PaymentTypeHandler.onChanged:
-        {
-          iStoneTechHandler.onChanged(IStoneHelper.convertToStoneTechResponse(message));
-        }
+        iStoneTechHandler.onChanged(IStoneHelper.convertToStoneTechResponse(_asString(message)));
         break;
       case PaymentTypeHandler.onLoading:
-        {
-          iStoneTechHandler.onLoading(message);
-        }
+        iStoneTechHandler.onLoading(message == true);
         break;
       case PaymentTypeHandler.writeToFile:
-        {
-          iStoneTechHandler.writeToFile(transactionCode: message['transactionCode'], transactionId: message['transactionId'], response: message['response']);
-        }
+        final map = message is Map ? message : const {};
+        iStoneTechHandler.writeToFile(
+          transactionCode: map['transactionCode']?.toString(),
+          transactionId: map['transactionId']?.toString(),
+          response: map['response']?.toString(),
+        );
         break;
       case PaymentTypeHandler.onAbortedSuccessfully:
-        {
-          iStoneTechHandler.onAbortedSuccessfully();
-        }
+        iStoneTechHandler.onAbortedSuccessfully();
         break;
       case PaymentTypeHandler.onAuthProgress:
-        {
-          iStoneTechHandler.onAuthProgress(IStoneHelper.convertToStoneTechResponse(message));
-        }
+        iStoneTechHandler.onAuthProgress(IStoneHelper.convertToStoneTechResponse(_asString(message)));
         break;
       case PaymentTypeHandler.onTransactionInfo:
-        {
-          iStoneTechHandler.onTransactionInfo(message);
-        }
+        iStoneTechHandler.onTransactionInfo(_asString(message));
         break;
-      default:
-        throw "METHOD NOT IMPLEMENTED";
+      case PaymentTypeHandler.disposeDialog:
+      case PaymentTypeHandler.activeDialog:
+        break;
     }
   }
 
   static StoneTransactionModel? _getTransactionModel(dynamic value) {
+    if (value is! String) return null;
     try {
-      final map = jsonDecode(value) as Map<String, dynamic>;
-      final transactionModel = StoneTransactionModel.fromMap(map);
-      return transactionModel;
+      final map = _decodeMap(value);
+      return map == null ? null : StoneTransactionModel.fromMap(map);
     } catch (e) {
       return null;
     }

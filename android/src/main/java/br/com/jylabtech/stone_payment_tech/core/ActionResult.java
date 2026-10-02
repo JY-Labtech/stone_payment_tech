@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import java.util.ArrayList;
 import java.util.List;
 
 import stone.database.transaction.TransactionObject;
@@ -40,7 +41,7 @@ public class ActionResult {
   private String userModel;
   private String deviceSerialNumber;
 
-  private List<StoneTransaction> stoneTransactions;
+  private List<StoneTransaction> stoneTransactions = new ArrayList<>();
 
   private boolean isPrinterRequest;
 
@@ -269,7 +270,7 @@ public class ActionResult {
 
 
   public void buildResponseStoneTransaction(TransactionObject transactionObjects, boolean isPaymentApproved) {
-    if (!isPaymentApproved) {
+    if (!isPaymentApproved || transactionObjects == null) {
       return;
     }
     
@@ -288,8 +289,12 @@ public class ActionResult {
     setSaleAffiliationKey(String.valueOf(transactionObjects.getSaleAffiliationKey()));
     setEntryMode(String.valueOf(transactionObjects.getEntryMode()));//
     setTypeOfTransactionEnum(String.valueOf(transactionObjects.getTypeOfTransactionEnum()));//
-    setSerialNumber(Stone.getPosAndroidDevice().getPosAndroidSerialNumber());
-    setManufacture(Stone.getPosAndroidDevice().getPosAndroidManufacturer());
+    try {
+      setSerialNumber(Stone.getPosAndroidDevice().getPosAndroidSerialNumber());
+      setManufacture(Stone.getPosAndroidDevice().getPosAndroidManufacturer());
+    } catch (Exception e) {
+      // Fora de um POS Stone o dispositivo não está disponível; segue sem serial/fabricante.
+    }
     setTransactionReference(String.valueOf(transactionObjects.getTransactionReference()));
     setCardBrand(String.valueOf(transactionObjects.getCardBrandName()));//
     setCardBrandId(transactionObjects.getCardBrandId());
@@ -299,21 +304,37 @@ public class ActionResult {
     setTransactionKey(transactionObjects.getAcquirerTransactionKey());
     setExternalID(transactionObjects.getExternalId());
     setInitiatorTransactionKey(transactionObjects.getInitiatorTransactionKey());
-    setTransactionStatus(transactionObjects.getTransactionStatus().toString());
+    if (transactionObjects.getTransactionStatus() != null) {
+      setTransactionStatus(transactionObjects.getTransactionStatus().toString());
+    }
     setPrinterRequest(true);
 
     this.isBuildResponse = 1;
   }
 
 
+  public List<StoneTransaction> getStoneTransactions() {
+    return stoneTransactions;
+  }
+
+  /**
+   * Resumo de todas as transações (paymentGetAllTransactions). Antes a lista
+   * era nula (NPE em toda chamada) e o mesmo objeto era reaproveitado em todos
+   * os itens (todos saíam iguais ao último).
+   */
   public void buildAllTransactions(List<TransactionObject> transactionObjects) {
-    stoneTransactions.clear();
-    StoneTransaction stoneTransaction = new StoneTransaction();
-    for (int i = 0; i < transactionObjects.size(); i++) {
-      stoneTransaction.setAmount(transactionObjects.get(i).getAmount());
-      stoneTransaction.setIdFromBase(transactionObjects.get(i).getIdFromBase());
-      stoneTransaction.setTransactionStatus(transactionObjects.get(i).getTransactionStatus().toString());
-      stoneTransactions.add(stoneTransaction);
+    stoneTransactions = new ArrayList<>();
+    if (transactionObjects == null) {
+      return;
+    }
+    for (TransactionObject transactionObject : transactionObjects) {
+      if (transactionObject == null) {
+        continue;
+      }
+      stoneTransactions.add(StoneTransaction.of(
+              transactionObject.getIdFromBase(),
+              transactionObject.getAmount(),
+              transactionObject.getTransactionStatus() != null ? transactionObject.getTransactionStatus().toString() : null));
     }
   }
 }

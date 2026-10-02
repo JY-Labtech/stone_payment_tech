@@ -5,14 +5,12 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
-import com.google.gson.reflect.TypeToken;
 import br.com.jylabtech.stone_payment_tech.core.BasicResult;
 import br.com.jylabtech.stone_payment_tech.payments.PaymentsFragment;
 import com.google.gson.Gson;
 import br.com.jylabtech.stone_payment_tech.payments.StoneHelper;
 
 import java.util.List;
-import java.util.Map;
 
 import br.com.stone.posandroid.providers.PosPrintProvider;
 import br.com.stone.posandroid.providers.PosPrintReceiptProvider;
@@ -29,7 +27,11 @@ public class StonePrinter {
     private Gson gson = null;
 
     public StonePrinter(MethodChannel channel) {
-        this.mFragment = new PaymentsFragment(channel);
+        this(new PaymentsFragment(channel));
+    }
+
+    public StonePrinter(PaymentsFragment fragment) {
+        this.mFragment = fragment;
         this.mStoneHelper = new StoneHelper();
     }
 
@@ -81,22 +83,11 @@ public class StonePrinter {
         PosPrintProvider posPrintProvider = new PosPrintProvider(context);
         basicResult.setMethod("customPrinter");
         try {
-            Map<String, Object> data = new Gson().fromJson(params, new TypeToken<Map<String, Object>>(){}.getType());
-            List<Map<String, Object>> printers = (List<Map<String, Object>>) data.get("printers");
-
-
-            for (Map<String, Object> printer : printers) {
-                String key = printer.get("key").toString();
-                String value = printer.get("value").toString();
-                String type = printer.get("type").toString();
-
-                if(type.equals("text")) {
-                    posPrintProvider.addLine(key + value);
-                }
-
-                if(type.equals("base64")) {
-                    String imageBase64 = printer.get("fileBase64").toString();
-                    posPrintProvider.addBase64Image(imageBase64);
+            for (PrinterParams.Item item : PrinterParams.parse(params)) {
+                if (item.image) {
+                    posPrintProvider.addBase64Image(item.content);
+                } else {
+                    posPrintProvider.addLine(item.content);
                 }
             }
             StoneCallbackInterface callback = getCallback(posPrintProvider, basicResult, "Impressão realizada com sucesso", "Erro ao imprimir");
@@ -154,7 +145,7 @@ public class StonePrinter {
         basicResult.setResult(999999);
         List<ErrorsEnum> errors = provider.getListOfErrors();
 
-        if (!errors.isEmpty()) {
+        if (errors != null && !errors.isEmpty()) {
             basicResult.setErrorMessage(mStoneHelper.getErrorMessageFromErrorEnum(errors.get(0)));
         } else {
             basicResult.setErrorMessage("Error: " + provider.getListOfErrors());

@@ -5,21 +5,16 @@ import android.content.Context;
 import android.os.Build;
 import android.provider.Settings;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import android.util.Log;
 
 // Exceções personalizadas
 class LicenceInvalidException extends Exception { LicenceInvalidException(String msg) { super(msg); } }
@@ -30,130 +25,82 @@ class LicenceExpiredException extends Exception { LicenceExpiredException(String
 class LicenceInternalErrorException extends Exception { LicenceInternalErrorException(String msg) { super(msg); } }
 class LicenceErrorException extends Exception { LicenceErrorException(String msg) { super(msg); } }
 
-public class LicenceProvider {
+public class LicenceProvider implements LicenceHttpClient {
+
+    private static final int CONNECT_TIMEOUT_MS = 15000;
+    private static final int READ_TIMEOUT_MS = 15000;
 
     private final Context context;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public LicenceProvider(Context context) {
         this.context = context;
     }
 
     /**
-     * Faz a requisição POST de forma assíncrona usando ExecutorService.
-     * Bloqueia a chamada atual até completar.
+     * Faz o POST de validação de forma bloqueante. Deve ser chamado fora da
+     * main thread. Devolve status e corpo; a decisão fica em LicenceRules.
      */
-    public LicenceResult checkLicence(final String urlString, final String licenceKey) throws Exception {
-        LicenceResult licenceResult = new LicenceResult();
-        licenceResult.setMethod("licence");
-        Callable<LicenceResult> task = new Callable<LicenceResult>() {
-            @Override
-            public LicenceResult call() throws Exception {
-                HttpURLConnection connection = null;
-                try {
-                    String deviceId = getAndroidId();
-                    String deviceUid = getSerialNumber();
-                    String deviceLocalId = getDeviceUUID();
-                    String deviceName = Build.MODEL;
-
-                    URL url = new URL(urlString);
-                    connection = (HttpURLConnection) url.openConnection();
-                    connection.setRequestMethod("POST");
-                    connection.setRequestProperty("Content-Type", "application/json");
-
-                    if (!licenceKey.isEmpty()) {
-                        connection.setRequestProperty("Authorization", "Bearer licence:" + licenceKey);
-                    }
-
-                    connection.setDoOutput(true);
-
-                    JSONObject body = new JSONObject();
-                   body.put("deviceId", deviceId);
-                   body.put("deviceUid", deviceUid);
-                   body.put("deviceLocalId", deviceLocalId);
-                   body.put("deviceName", deviceName);
-                    // body.put("serialNumber", deviceUid);
-
-                    OutputStream os = connection.getOutputStream();
-                    os.write(body.toString().getBytes("UTF-8"));
-                    os.flush();
-                    os.close();
-
-                    int responseCode = connection.getResponseCode();
-                    BufferedReader reader;
-
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                        StringBuilder responseStr = new StringBuilder();
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            responseStr.append(line);
-                        }
-                        reader.close();
-
-                        licenceResult.setResult(0);
-                        licenceResult.setLicenceEntity(CheckLicenceEntity.fromJson(responseStr.toString()));
-
-                        return licenceResult;
-                    } else {
-
-                        licenceResult.setResult(999999);
-                        licenceResult.setErrorMessage(handleErrors(connection));
-
-                        return licenceResult;
-                    }
-
-                } finally {
-                    if (connection != null) {
-                        connection.disconnect();
-                    }
-                }
-            }
-        };
-
-        Future<LicenceResult> future = executor.submit(task);
+    @Override
+    public LicenceHttpResponse post(final String urlString, final String licenceKey) throws Exception {
+        HttpURLConnection connection = null;
         try {
-            return future.get(); // aguarda a execução completa
-        } catch (ExecutionException e) {
-            licenceResult.setResult(999999);
-            licenceResult.setErrorMessage(e.getMessage());
-            return licenceResult;
-            // throw e.getCause() != null ? (Exception) e.getCause() : e;
+            String deviceId = getAndroidId();
+            String deviceUid = getSerialNumber();
+            String deviceLocalId = getDeviceUUID();
+            String deviceName = Build.MODEL;
+
+            URL url = new URL(urlString);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(READ_TIMEOUT_MS);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestProperty("Content-Type", "application/json");
+
+            if (licenceKey != null && !licenceKey.isEmpty()) {
+                connection.setRequestProperty("Authorization", "Bearer licence:" + licenceKey);
+            }
+
+            connection.setDoOutput(true);
+
+            JSONObject body = new JSONObject();
+            body.put("deviceId", deviceId);
+            body.put("deviceUid", deviceUid);
+            body.put("deviceLocalId", deviceLocalId);
+            body.put("deviceName", deviceName);
+
+            OutputStream os = connection.getOutputStream();
+            os.write(body.toString().getBytes("UTF-8"));
+            os.flush();
+            os.close();
+
+            int responseCode = connection.getResponseCode();
+            InputStream stream = responseCode == HttpURLConnection.HTTP_OK
+                    ? connection.getInputStream()
+                    : connection.getErrorStream();
+            return new LicenceHttpResponse(responseCode, readAll(stream));
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 
-    private String handleErrors(HttpURLConnection connection) throws Exception {
-        String errorMessage = "Erro interno";
-        int statusCode = connection.getResponseCode();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-        StringBuilder responseStr = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            responseStr.append(line);
+    private static String readAll(InputStream stream) throws IOException {
+        if (stream == null) {
+            return null;
         }
-        reader.close();
-
-        String message = null;
+        BufferedReader reader = new BufferedReader(new InputStreamReader(stream, "UTF-8"));
         try {
-            JSONObject json = new JSONObject(responseStr.toString());
-            message = json.optString("message", null);
-            errorMessage = message;
-        } catch (JSONException e) {
-            errorMessage = e.getMessage();
-            Log.d("print", "*ExceptionMessageError: " + e.getMessage());
+            StringBuilder responseStr = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                responseStr.append(line);
+            }
+            return responseStr.toString();
+        } finally {
+            reader.close();
         }
-
-        return errorMessage;
-
-//        switch (statusCode) {
-//            case 400: throw new LicenceInvalidException(message != null ? message : "Bad Request");
-//            case 401: throw new LicenceUnAuthorizedException(message != null ? message : "Unauthorized");
-//            case 404: throw new LicenceNotFoundException(message != null ? message : "Not Found");
-//            case 412: throw new LicenceConditionRequiredException(message != null ? message : "Precondition Failed");
-//            case 428: throw new LicenceExpiredException(message != null ? message : "Licence Expired");
-//            case 500: throw new LicenceInternalErrorException(message != null ? message : "Internal Server Error");
-//            default: throw new LicenceErrorException(message != null ? message : "Unknown Error");
-//        }
     }
 
     @SuppressLint("HardwareIds")

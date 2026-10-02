@@ -18,6 +18,11 @@ public class PaymentsFragment implements PaymentsContract {
 
 
 
+  /** O Dart recebe String não nula em onError/onMessage/...; null derrubava o handler (TypeError). */
+  static String nonNull(String message) {
+    return message == null ? "" : message;
+  }
+
   private void runOnUiThread(Runnable runnable) {
     if (Looper.myLooper() == Looper.getMainLooper()) {
       runnable.run();
@@ -53,7 +58,7 @@ public class PaymentsFragment implements PaymentsContract {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        channel.invokeMethod(ON_ERROR, message);
+        channel.invokeMethod(ON_ERROR, nonNull(message));
       }
     });
   }
@@ -63,7 +68,7 @@ public class PaymentsFragment implements PaymentsContract {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        channel.invokeMethod(ON_CHANGED, message);
+        channel.invokeMethod(ON_CHANGED, nonNull(message));
       }
     });
   }
@@ -73,7 +78,7 @@ public class PaymentsFragment implements PaymentsContract {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        channel.invokeMethod(ON_MESSAGE, message);
+        channel.invokeMethod(ON_MESSAGE, nonNull(message));
       }
     });
   }
@@ -83,7 +88,7 @@ public class PaymentsFragment implements PaymentsContract {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        channel.invokeMethod(ON_FINISHED_RESPONSE, message);
+        channel.invokeMethod(ON_FINISHED_RESPONSE, nonNull(message));
       }
     });
   }
@@ -113,7 +118,7 @@ public class PaymentsFragment implements PaymentsContract {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        channel.invokeMethod(ON_AUTH_PROGRESS, message);
+        channel.invokeMethod(ON_AUTH_PROGRESS, nonNull(message));
       }
     });
   }

@@ -2,11 +2,7 @@ package br.com.jylabtech.stone_payment_tech;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
-import androidx.annotation.NonNull;
 import br.com.jylabtech.stone_payment_tech.core.StoneTech;
-import br.com.jylabtech.stone_payment_tech.payments.PaymentsFragment;
-import br.com.jylabtech.stone_payment_tech.payments.PaymentsPresenter;
-import br.com.jylabtech.stone_payment_tech.payments.PaymentsUseCase;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -33,27 +29,34 @@ public class StoneTechFlutterPlugin
     stoneTech = new StoneTech(context, channel);
   }
 
-@Override
-public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-    try {
-        if (call.method.startsWith("payment")) {
-            stoneTech.initPayment(call, result);
-        } else {
-            result.notImplemented();
-        }
-    } catch (Exception e) {
-        // Captura qualquer Exception e envia de volta para o Flutter
-        result.error("ERROR", e.getMessage(), null);
+  @Override
+  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+    // Antes só métodos iniciados por "payment" chegavam ao StoneTech, então
+    // "checkLicence" respondia notImplemented. Métodos desconhecidos continuam
+    // respondendo notImplemented (StoneMethodHandler).
+    final StoneTech current = stoneTech;
+    if (current == null) {
+      result.error("ERROR", "Plugin desanexado da engine", null);
+      return;
     }
-}
-
+    try {
+      current.initPayment(call, result);
+    } catch (Exception e) {
+      // Captura qualquer Exception e envia de volta para o Flutter
+      result.error("ERROR", e.getMessage(), null);
+    }
+  }
 
   @Override
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
     //Dispose plugin
-    channel.setMethodCallHandler(null);
-    channel = null;
-    stoneTech.dispose();
-    stoneTech = null;
+    if (channel != null) {
+      channel.setMethodCallHandler(null);
+      channel = null;
+    }
+    if (stoneTech != null) {
+      stoneTech.dispose();
+      stoneTech = null;
+    }
   }
 }

@@ -3,38 +3,42 @@ package br.com.jylabtech.stone_payment_tech.payments;
 import android.content.Context;
 
 
-import com.google.gson.Gson;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import br.com.jylabtech.stone_payment_tech.core.ActionResult;
-import br.com.jylabtech.stone_payment_tech.core.BasicResult;
 import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
+import br.com.jylabtech.stone_payment_tech.licence.LicenceResult;
 import io.flutter.plugin.common.MethodChannel;
 import io.reactivex.disposables.Disposable;
 import stone.utils.keys.StoneKeyType;
-import android.util.Log;
 
 public class PaymentsPresenter {
 
     private PaymentsUseCase mUseCase;
     private PaymentsFragment mFragment;
     private Disposable mSubscribe;
-    private Boolean hasAborted = false;
-    private int countPassword = 0;
-    private boolean isDebugLog = false;
-    private CheckLicenceTech licenceTech;
-    Gson gson = null;
 
     private Context context;
 
-    //@Inject
     public PaymentsPresenter(MethodChannel channel, boolean isDebugLog, Context context1) {
+        this(channel, isDebugLog, context1, new CheckLicenceTech(context1));
+    }
+
+    /** Reaproveita a mesma instância de licença (e de EncryptedSharedPreferences) do plugin. */
+    public PaymentsPresenter(MethodChannel channel, boolean isDebugLog, Context context1, CheckLicenceTech licenceTech) {
         this.context = context1;
-        this.mUseCase = new PaymentsUseCase(channel, isDebugLog, context1);
+        this.mUseCase = new PaymentsUseCase(channel, isDebugLog, context1, licenceTech);
         this.mFragment = new PaymentsFragment(channel);
-        this.licenceTech = new CheckLicenceTech(context1);
+    }
+
+    public void setDebugLog(boolean isDebugLog) {
+        mUseCase.setDebugLog(isDebugLog);
+    }
+
+    /** 2ª barreira de licença: liberada pelo gate somente durante o despacho do método. */
+    public void setLicenceGranted(boolean granted) {
+        mUseCase.setLicenceGranted(granted);
     }
 
     public void doTransaction(Context context,
@@ -51,14 +55,15 @@ public class PaymentsPresenter {
             mUseCase.initTransaction(context, amount, typeTransaction, initiatorTransactionKey, parc, withInterest, null, printCustomerSlip, printEstablishmentSlip);
             return;
         }
-        Map<StoneKeyType, String> stoneKeys = new HashMap<StoneKeyType, String>()
-        {
-            {
-                put(StoneKeyType.QRCODE_AUTHORIZATION, "Bearer " + qrCodeAuthorization);
-                put(StoneKeyType.QRCODE_PROVIDERID, qrCodeProviderid);
-            }
-        };
-        mUseCase.initTransaction(context, amount, typeTransaction, initiatorTransactionKey, parc, withInterest, stoneKeys, printCustomerSlip, printEstablishmentSlip);
+        mUseCase.initTransaction(context, amount, typeTransaction, initiatorTransactionKey, parc, withInterest, qrCodeKeys(qrCodeAuthorization, qrCodeProviderid), printCustomerSlip, printEstablishmentSlip);
+    }
+
+    /** Chaves do PIX/QRCode enviadas ao StoneStart.init (o token vai com o prefixo "Bearer "). */
+    static Map<StoneKeyType, String> qrCodeKeys(String qrCodeAuthorization, String qrCodeProviderid) {
+        Map<StoneKeyType, String> stoneKeys = new HashMap<>();
+        stoneKeys.put(StoneKeyType.QRCODE_AUTHORIZATION, "Bearer " + qrCodeAuthorization);
+        stoneKeys.put(StoneKeyType.QRCODE_PROVIDERID, qrCodeProviderid);
+        return stoneKeys;
     }
 
     public void printerCurrentTransaction(Context context, boolean printCustomerSlip) {
@@ -85,14 +90,7 @@ public class PaymentsPresenter {
                                         String qrCodeAuthorization,
                                         String qrCodeProviderid,
                                         Context context) throws Exception {
-        Map<StoneKeyType, String> stoneKeys = new HashMap<StoneKeyType, String>()
-        {
-            {
-                put(StoneKeyType.QRCODE_AUTHORIZATION, "Bearer " + qrCodeAuthorization);
-                put(StoneKeyType.QRCODE_PROVIDERID, qrCodeProviderid);
-            }
-        };
-        mUseCase.initializeAndActivatePinPadWithCredentials(appName, stoneCode, stoneKeys, context);
+        mUseCase.initializeAndActivatePinPadWithCredentials(appName, stoneCode, qrCodeKeys(qrCodeAuthorization, qrCodeProviderid), context);
 
     }
 
@@ -116,7 +114,6 @@ public class PaymentsPresenter {
     }
 
     public void getTransactionByInitiatorTransactionKey(Context context, String InitiatorTransactionKey) {
-        System.out.println("InitiatorTransactionKey: " + InitiatorTransactionKey);
         mUseCase.getTransactionByInitiatorTransactionKey(context, InitiatorTransactionKey);
     }
 
@@ -144,8 +141,12 @@ public class PaymentsPresenter {
         return mUseCase.getPosManufacture();
     }
 
-    public boolean checkValidLicence(String licenceKey, String licenceInternalKey) throws Exception {
-        return this.mUseCase.checkValidLicence(licenceKey, licenceInternalKey);
+    public void notifyLicenceChecking() {
+        this.mUseCase.notifyLicenceChecking();
+    }
+
+    public void notifyLicenceResult(LicenceResult result) {
+        this.mUseCase.notifyLicenceResult(result);
     }
 
 

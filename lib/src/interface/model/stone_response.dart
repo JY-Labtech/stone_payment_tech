@@ -25,10 +25,10 @@ class StoneTechResponse {
 
   factory StoneTechResponse.fromMap(Map<String, dynamic> map) {
     return StoneTechResponse(
-      method: map['method'] != null ? map['method'] as String : null,
-      errorMessage: map['errorMessage'] != null ? map['errorMessage'] as String : null,
-      message: map['message'] != null ? map['message'] as String : null,
-      result: map['result'] != null ? map['result'] as int : null,
+      method: map['method']?.toString(),
+      errorMessage: map['errorMessage']?.toString(),
+      message: map['message']?.toString(),
+      result: _asInt(map['result']),
     );
   }
 
@@ -52,4 +52,10 @@ class StoneTechResponse {
   int get hashCode {
     return method.hashCode ^ errorMessage.hashCode ^ message.hashCode ^ result.hashCode;
   }
+}
+
+int? _asInt(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
 }

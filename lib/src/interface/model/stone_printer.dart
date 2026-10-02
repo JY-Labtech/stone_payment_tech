@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
 
+import '../utils/extensions/printer_type_ext.dart';
 import '../utils/types/printer_type.dart';
 
 class StonePrinterParams {
@@ -16,7 +17,9 @@ class StonePrinterParams {
   }
 
   factory StonePrinterParams.fromMap(Map<String, dynamic> map) {
-    return StonePrinterParams(printers: List<StonePrinter>.from((map['printers'] as List<int>).map<StonePrinter>((x) => StonePrinter.fromMap(x as Map<String, dynamic>))));
+    // Antes fazia cast para List<int> e sempre falhava.
+    final printers = map['printers'] as List<dynamic>? ?? const [];
+    return StonePrinterParams(printers: printers.map<StonePrinter>((x) => StonePrinter.fromMap(Map<String, dynamic>.from(x as Map))).toList());
   }
 
   String toJson() => json.encode(toMap());
@@ -43,7 +46,14 @@ class StonePrinter {
   }
 
   factory StonePrinter.fromMap(Map<String, dynamic> map) {
-    return StonePrinter(title: map['key'] as String, description: map['value'] as String, printerType: PrinterType.values.firstWhere((element) => element.name == map['type'] as String), imageBase64: map['fileBase64'] != null ? map['fileBase64'] as String : null);
+    final type = map['type']?.toString();
+    return StonePrinter(
+      title: map['key']?.toString() ?? '',
+      description: map['value']?.toString() ?? '',
+      // Aceita o nome do enum ("image") e o valor enviado ao nativo ("base64").
+      printerType: PrinterType.values.firstWhere((element) => element.name == type || element.type == type, orElse: () => PrinterType.text),
+      imageBase64: map['fileBase64']?.toString(),
+    );
   }
 
   String toJson() => json.encode(toMap());

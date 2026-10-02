@@ -9,15 +9,13 @@ class StoneTechPrinterHandler extends IStoneHandler {
     required this.onMessageMonitor,
   });
   @override
-  Future<void> onAuthProgress(String message) {
-    // TODO: implement onAuthProgress
-    throw UnimplementedError();
+  Future<void> onAuthProgress(String message) async {
+    // Sem ação na impressão (antes lançava UnimplementedError e quebrava o handler do canal).
   }
 
   @override
-  Future<void> onChanged(String message) {
-    // TODO: implement onChanged
-    throw UnimplementedError();
+  Future<void> onChanged(String message) async {
+    // Sem ação na impressão (antes lançava UnimplementedError e quebrava o handler do canal).
   }
 
   @override
@@ -33,9 +31,8 @@ class StoneTechPrinterHandler extends IStoneHandler {
   }
 
   @override
-  Future<void> onLoading(bool show) {
-    // TODO: implement onLoading
-    throw UnimplementedError();
+  Future<void> onLoading(bool show) async {
+    // Sem ação na impressão (antes lançava UnimplementedError e quebrava o handler do canal).
   }
 
   @override
@@ -45,8 +42,7 @@ class StoneTechPrinterHandler extends IStoneHandler {
   }
 
   @override
-  Future<void> onTransactionSuccess() {
-    // TODO: implement onTransactionSuccess
-    throw UnimplementedError();
+  Future<void> onTransactionSuccess() async {
+    // Sem ação na impressão (antes lançava UnimplementedError e quebrava o handler do canal).
   }
 }

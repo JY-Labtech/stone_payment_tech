@@ -20,18 +20,13 @@ buildscript {
             throw new GradleException("LicenceKey não encontrado!!")
         }
 
-        if (!licenceInternalKey || licenceInternalKey == "") {
-            throw new GradleException("LicenceInternalKey não encontrado!!")
-        }
+        // licenceInternalKey é opcional: vazio ou fora do servidor oficial usa
+        // https://licence-server.invalid/pos-payments/licence/check (LicenceConfig).
 
         // Tokens PackageCloud
         packageCloudReadToken = System.env.PACKAGECLOUD_READ_TOKEN != null ? System.env.PACKAGECLOUD_READ_TOKEN : localProps["packageCloudReadToken"] ?: ""
         packageCloudReadTokenInternal = System.env.PACKAGECLOUD_READ_TOKEN_INTERNAL ?: localProps["packageCloudReadTokenInternal"]
 
-        println "packageCloudReadToken: $packageCloudReadToken"
-        println "packageCloudReadTokenInternal: $packageCloudReadTokenInternal"
-        println "licenceKey: $licenceKey"
-        println "licenceInternalKey: $licenceInternalKey"
     }
 
     repositories {
@@ -206,4 +201,8 @@ dependencies {
     // Dependencias para módulo de licença (sem kapt)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha03")
+
+    // Testes JVM da validação de licença (org.json do android.jar é stub)
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.json:json:20240303"
 }
