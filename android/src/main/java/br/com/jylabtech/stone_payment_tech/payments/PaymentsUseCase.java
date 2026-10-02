@@ -5,8 +5,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import br.com.jylabtech.stone_payment_tech.BuildConfig;
 import br.com.jylabtech.stone_payment_tech.core.ActionResult;
 import br.com.jylabtech.stone_payment_tech.core.BasicResult;
+import br.com.jylabtech.stone_payment_tech.core.StoneMethodHandler;
 import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
 import br.com.jylabtech.stone_payment_tech.licence.LicenceResult;
 import br.com.jylabtech.stone_payment_tech.printer.StonePrinter;
@@ -36,14 +38,9 @@ import stone.utils.Stone;
 import io.flutter.plugin.common.MethodChannel;
 import stone.utils.keys.StoneKeyType;
 
-import android.Manifest;
-import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
-import androidx.core.content.ContextCompat;
 
 public class PaymentsUseCase {
 
@@ -60,6 +57,8 @@ public class PaymentsUseCase {
   List<TransactionObject> transactionObjects;
   private boolean isAbortRunning = false;
   private boolean isActivationRunning = false;
+  /** Liberado pelo gate de licença (StoneMethodHandler) apenas durante o despacho do método. */
+  private volatile boolean licenceGranted = false;
 
   private Context context;
   private CheckLicenceTech licenceTech;
@@ -72,17 +71,37 @@ public class PaymentsUseCase {
 
 
   public PaymentsUseCase(MethodChannel channel, boolean isDebugLog, Context context1) {
+    this(channel, isDebugLog, context1, new CheckLicenceTech(context1));
+  }
+
+  public PaymentsUseCase(MethodChannel channel, boolean isDebugLog, Context context1, CheckLicenceTech licenceTech) {
     this.mFragment = new PaymentsFragment(channel);
     this.mStonePrinter = new StonePrinter(channel);
     this.mStoneHelper = new StoneHelper();
     this.isDebugLog = isDebugLog;
     this.context = context1;
-    this.licenceTech = new CheckLicenceTech(context1);
+    this.licenceTech = licenceTech;
     this.timeoutHandler = new Handler(Looper.getMainLooper());
   }
 
+  public void setDebugLog(boolean isDebugLog) {
+    this.isDebugLog = isDebugLog;
+  }
+
+  public void setLicenceGranted(boolean granted) {
+    this.licenceGranted = granted;
+  }
+
   private boolean isValidLicence() throws Exception {
-    boolean result = licenceTech.validateExistsLicence();
+    // Segunda barreira (a primeira fica no StoneMethodHandler antes de cada método).
+    // Durante o despacho de um método liberado pelo gate não relê o cache: isso
+    // evita outra leitura do EncryptedSharedPreferences e respeita a regra de que
+    // a licença confirmada pelo servidor libera a operação mesmo se o cache não
+    // pôde ser salvo. Fora do despacho, só o cache válido libera (sem rede).
+    if (licenceGranted) {
+      return true;
+    }
+    boolean result = licenceTech.hasValidCachedLicence(BuildConfig.LICENCE_KEY, BuildConfig.LICENCE_INTERNAL_KEY);
     if(result) {
        return true;
     }
@@ -177,7 +196,14 @@ public class PaymentsUseCase {
     if(isDebugLog) {
     Log.d("print", "****** handleTransactionSuccess: " + transaction.getTransactionStatus());
     }
-    TransactionObject transactionObject = transactionDAO.findTransactionWithInitiatorTransactionKey(transaction.getInitiatorTransactionKey());
+    TransactionObject transactionObject = null;
+    if (transaction.getInitiatorTransactionKey() != null) {
+      transactionObject = transactionDAO.findTransactionWithInitiatorTransactionKey(transaction.getInitiatorTransactionKey());
+    }
+    if (transactionObject == null) {
+      // Sem registro no banco local: usa a própria transação (antes gerava NPE em buildResponseStoneTransaction).
+      transactionObject = transaction;
+    }
     if(userModel != null && !userModel.isEmpty()){
       String userModelString = getGson().toJson(userModel.get(0));
       actionResult.setUserModel(userModelString);
@@ -332,8 +358,8 @@ public class PaymentsUseCase {
     if(isDebugLog) {
     Log.d("print", "****setPaymentOption: " + value);
     }
-    if(posTransactionProvider == null || optionList.isEmpty()) return;
-    Integer index = optionList.indexOf(value);
+    int index = StoneHelper.optionIndex(optionList, value);
+    if(posTransactionProvider == null || index < 0) return;
     posTransactionProvider.setTransactionTypeSelected(index);
   }
 
@@ -345,6 +371,11 @@ public class PaymentsUseCase {
   }
 
   public void printerCurrentTransaction(Context context, boolean printCustomerSlip) {
+    // A via impressa aqui é a do cliente: printCustomerSlip=false (usuário
+    // recusou a via no StoneStreamPage/Dialog) não imprime. Antes o argumento era ignorado.
+    if (!printCustomerSlip) {
+      return;
+    }
     if(currentTransactionObject == null) {
       if(isDebugLog) {
       Log.d("print", "****ERROR_currentTransactionObject: invalid null value");
@@ -698,6 +729,9 @@ public class PaymentsUseCase {
         }
     }
     try {
+      if (currentTransactionObject == null) {
+        throw new Exception("Nenhuma transação PIX em andamento");
+      }
       final CancellationProvider cancellationProvider = new CancellationProvider(context, currentTransactionObject);
       cancellationProvider.execute();
     } catch (Exception error) {
@@ -734,7 +768,10 @@ public class PaymentsUseCase {
       }
       @Override
       public void onError() {
-        String error = currentTransactionObject.getActionCode();
+        String error = transaction.getActionCode();
+        if (error == null || error.isEmpty()) {
+          error = "Erro ao cancelar transação";
+        }
         basicResult.setResult(999999);
         basicResult.setErrorMessage(mStoneHelper.getErrorFromErrorList(provider.getListOfErrors()));
         mFragment.onMessage("Erro ao cancelar transação");
@@ -947,11 +984,10 @@ public class PaymentsUseCase {
         actionResult.setMessageFromAuthorize(transactionObject.getAuthorizationCode());
         actionResult.setAuthorizationCode(transactionObject.getAuthorizationCode());
 
-        if(!userModel.isEmpty()){
+        if(userModel != null && !userModel.isEmpty()){
           String userModelString = getGson().toJson(userModel.get(0));
           actionResult.setUserModel(userModelString);
         }
-        actionResult.buildResponseStoneTransaction(transactionObject, isPaymentApproved);
         actionResult.buildResponseStoneTransaction(transactionObject, isPaymentApproved);
 
         String jsonStoneResult = convertActionToJson(actionResult);
@@ -1054,7 +1090,7 @@ public class PaymentsUseCase {
 
     public String getPosManufacture() {
     try {
-      if(!isInitialized) {
+      if(!isInitialized && !isSdkInitialized()) {
         return null;
       }
       return Stone.getPosAndroidDevice().getPosAndroidManufacturer();
@@ -1064,34 +1100,38 @@ public class PaymentsUseCase {
     }
 
 
-  public boolean checkValidLicence(String licenceKey, String licenceInternalKey) throws Exception {
-    boolean aux = false;
+  /** isInitialized só era atualizado no débito sem chaves; após a ativação o fabricante voltava null. */
+  private boolean isSdkInitialized() {
+    try {
+      return StoneStart.INSTANCE.getSDKInitialized();
+    } catch (Throwable e) {
+      return false;
+    }
+  }
+
+  public void notifyLicenceChecking() {
+    this.mFragment.onMessage("Verificando licença");
+  }
+
+  /** Envia ao Flutter o resultado da licença (mesmos eventos das versões anteriores). */
+  public void notifyLicenceResult(LicenceResult resultLicence) {
     BasicResult result = new BasicResult();
     result.setMethod("licence");
-    this.mFragment.onMessage("Verificando licença");
-    LicenceResult resultLicence =  licenceTech.validateLicence(licenceKey, licenceInternalKey);
-
-
-    if(resultLicence.getResult() == 0) {
-      aux = true;
+    if (resultLicence != null && resultLicence.isSuccess()) {
       this.mFragment.onMessage("Licença ativada");
       result.setResult(0);
       result.setMessage("Licença ativada com sucesso");
       this.mFragment.onFinishedResponse(convertBasicResultToJson(result));
+      return;
     }
+    String errorMessage = licenceErrorMessage(resultLicence);
+    this.mFragment.onMessage(errorMessage);
+    result.setResult(999999);
+    result.setErrorMessage(errorMessage);
+    this.mFragment.onFinishedResponse(convertBasicResultToJson(result));
+  }
 
-    if(!aux) {
-      String errorMessage = resultLicence.getErrorMessage();
-      if(errorMessage == null || errorMessage.isEmpty()) {
-        errorMessage = "Licença não ativada";
-      }
-      this.mFragment.onMessage(errorMessage);
-      result.setResult(999999);
-      result.setErrorMessage(errorMessage);
-      this.mFragment.onFinishedResponse(convertBasicResultToJson(result));
-      throw new Exception("Licença não ativada, consulte o suporte do plugin.");
-    }
-
-    return aux;
+  public static String licenceErrorMessage(LicenceResult resultLicence) {
+    return StoneMethodHandler.licenceErrorMessage(resultLicence);
   }
 }

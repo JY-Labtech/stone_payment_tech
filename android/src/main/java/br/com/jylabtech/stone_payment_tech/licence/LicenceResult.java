@@ -2,10 +2,32 @@ package br.com.jylabtech.stone_payment_tech.licence;
 
 
 public class LicenceResult {
-    private String method;
+    public static final int RESULT_SUCCESS = 0;
+    public static final int RESULT_ERROR = 999999;
+
+    private String method = "licence";
     private String errorMessage;
-    private int result;
+    // Começa como erro: só vira sucesso quando a licença for comprovadamente válida.
+    private int result = RESULT_ERROR;
     private String message;
+
+    public static LicenceResult success(CheckLicenceEntity entity) {
+        LicenceResult r = new LicenceResult();
+        r.setResult(RESULT_SUCCESS);
+        r.setLicenceEntity(entity);
+        return r;
+    }
+
+    public static LicenceResult error(String errorMessage) {
+        LicenceResult r = new LicenceResult();
+        r.setResult(RESULT_ERROR);
+        r.setErrorMessage(errorMessage);
+        return r;
+    }
+
+    public boolean isSuccess() {
+        return result == RESULT_SUCCESS;
+    }
 
     private CheckLicenceEntity licenceEntity;
 

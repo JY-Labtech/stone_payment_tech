@@ -14,7 +14,7 @@ import 'helper/istone_helper.dart';
 final class StonePayment {
   final MethodChannel channel;
   IStoneHandler paymentHandler;
-  // final IStoneTechHandler? iStoneTechHandler;
+  IStoneTechHandler? _stoneTechHandler;
 
   // Cache da instância criada
   static StonePayment? _instance;
@@ -39,7 +39,7 @@ final class StonePayment {
     final payment = StonePayment._(
       channel: channel,
       paymentHandler: paymentHandler,
-    );
+    ).._stoneTechHandler = iStoneTechHandler;
 
     // Salva instância e estado da licença validada
     _instance = payment;
@@ -56,7 +56,8 @@ final class StonePayment {
 
   static void _checkPinpadActivated(StoneTransactionModel model) {
     if (model.method?.toLowerCase() == 'active') {
-      if (model.message!.toLowerCase().contains('terminal ativado')) {
+      // message vem nula nos erros de ativação (só errorMessage): antes gerava NPE.
+      if ((model.message ?? '').toLowerCase().contains('terminal ativado')) {
         StoneTech.isPinpadActivated = true;
         log('Pinpad activated');
         return;
@@ -73,11 +74,20 @@ final class StonePayment {
     _instance?.channel.setMethodCallHandler(
       (e) => IStoneHelper.callHandler(
         call: e,
-        iStoneHandler: paymentHandler,
-        stoneTechHandler: null,
+        iStoneHandler: handler,
+        // Mantém o IStoneTechHandler informado no create (antes era descartado).
+        stoneTechHandler: _instance?._stoneTechHandler,
         onTransaction: (model) => _checkPinpadActivated(model),
       ),
     );
+  }
+
+  /// Valida a licença no nativo (cache local ou servidor oficial) sem chamar o SDK.
+  ///
+  /// Retorna `true` com licença válida; lança `PlatformException(code: 'LICENCE_ERROR')`
+  /// com licença inválida.
+  Future<bool> checkLicence() async {
+    return await channel.invokeMethod<bool>('checkLicence') ?? false;
   }
 
   /// Function to reversal transaction

@@ -33,6 +33,10 @@ android {
             dimension "model"
             versionNameSuffix "-gertecGpos700"
         }
+        gertecGposSeries7 {
+            dimension "model"
+            versionNameSuffix "-gertecGposSeries7"
+        }
         positivoSeriesL {
             dimension "model"
             versionNameSuffix "-positivoSeriesL"

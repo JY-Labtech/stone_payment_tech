@@ -1,3 +1,6 @@
+import 'dart:developer';
+
+import 'package:flutter/services.dart';
 import 'package:stone_payment_tech/src/app/handler/stone_stream_handler.dart';
 import 'package:stone_payment_tech/src/app/model/stone_credentials.dart';
 import 'package:stone_payment_tech/src/app/model/stone_payment_params.dart';
@@ -73,7 +76,9 @@ class StoneStreamController {
       handler!.setStreamStatus(const StoneStatusTechActivateRunning(message: 'Ativando Terminal...'));
       try {
         await initialize(stoneCredentials: params.credentials, stonePaymentParams: params);
-        // Não resetar _isActivating aqui, será resetado quando receber StoneStatusActivate ou StoneStatusActivateError
+        if (!StoneTech.isPinpadActivated) {
+          _isActivating = false;
+        }
       } catch (e) {
         _isActivating = false;
         rethrow;
@@ -89,48 +94,48 @@ class StoneStreamController {
       case StoneTechPaymentType.credit:
         {
           if (params.installments != null) {
-            stone.payment.creditPaymentParc(
+            _fireAndForget(stone.payment.creditPaymentParc(
               value: amountInt,
               installment: params.installments!,
               printEstablishmentSlip: true,
               printCustomerSlip: false,
-            );
+            ));
           } else {
-            stone.payment.creditPayment(
+            _fireAndForget(stone.payment.creditPayment(
               amountInt,
               printEstablishmentSlip: true,
               printCustomerSlip: false,
-            );
+            ));
           }
         }
         break;
       case StoneTechPaymentType.debit:
         {
-          stone.payment.debitPayment(
+          _fireAndForget(stone.payment.debitPayment(
             amountInt,
             printEstablishmentSlip: true,
             printCustomerSlip: false,
-          );
+          ));
         }
         break;
       case StoneTechPaymentType.pix:
         {
-          stone.payment.pixPayment(
+          _fireAndForget(stone.payment.pixPayment(
             amount: amountInt,
             qrCodeAuthroization: credentials.qrCodeAuthorization ?? '',
             qrCodeProviderid: credentials.qrCodeProviderid ?? '',
             printEstablishmentSlip: true,
             printCustomerSlip: false,
-          );
+          ));
         }
         break;
       case StoneTechPaymentType.voucher:
         {
-          stone.payment.voucherPayment(
+          _fireAndForget(stone.payment.voucherPayment(
             amountInt,
             printEstablishmentSlip: true,
             printCustomerSlip: false,
-          );
+          ));
         }
         break;
       default:
@@ -142,29 +147,42 @@ class StoneStreamController {
     if (_isActivating) {
       _isActivating = false;
       handler?.setStreamStatus(const StoneStatusTechActivateError(message: 'Ativação cancelada pelo usuário'));
-      stone.payment.abortActivation();
+      _fireAndForget(stone.payment.abortActivation());
     } else if (currentMethod == StoneTechPaymentType.pix) {
-      stone.payment.abortPIXTransaction();
+      _fireAndForget(stone.payment.abortPIXTransaction());
     } else {
-      stone.payment.abortTransaction();
+      _fireAndForget(stone.payment.abortTransaction());
     }
   }
 
   void printer(StonePrinterParams params) {
-    stone.payment.customPrinter(params);
+    _fireAndForget(stone.payment.customPrinter(params));
   }
 
   void printerFromBase64(String base64) {
-    stone.payment.printFromBase64(base64);
+    _fireAndForget(stone.payment.printFromBase64(base64));
   }
 
   void cancelTransaction({required int idFromBase}) {
     handler?.clear();
-    stone.payment.cancelTransaction(idFromBase: idFromBase);
+    _fireAndForget(stone.payment.cancelTransaction(idFromBase: idFromBase));
   }
 
   void printCurrentTransaction() {
-    stone.payment.printerCurrentTransaction(printCustomerSlip: true);
+    _fireAndForget(stone.payment.printerCurrentTransaction(printCustomerSlip: true));
+  }
+
+  /// As operações respondem assim que são disparadas e o resultado chega pelo
+  /// stream. Sem `await`, um erro do canal (`LICENCE_ERROR`/`ERROR`) virava
+  /// exceção assíncrona não tratada; agora é logado e, se não for de licença
+  /// (que já chega no stream como [StoneStatusTechActivateError]), vira mensagem.
+  void _fireAndForget(Future<dynamic> operation) {
+    operation.then<void>((_) {}, onError: (Object e) {
+      log('StoneStreamController: $e');
+      if (e is PlatformException && e.code != 'LICENCE_ERROR') {
+        handler?.setStatus(e.message ?? 'Erro ao executar a operação');
+      }
+    });
   }
 
   void dispose() {
@@ -175,7 +193,7 @@ class StoneStreamController {
   }
 
   void onPrinterCustomer(bool value) async {
-    stone.payment.printerCurrentTransaction(printCustomerSlip: value);
+    _fireAndForget(stone.payment.printerCurrentTransaction(printCustomerSlip: value));
   }
 
   Future<void> setPaymentOption(String option) async {

@@ -7,6 +7,7 @@ extension StringPaymentHandlerExt on String {
       "onError": PaymentTypeHandler.onError,
       "onMessage": PaymentTypeHandler.onMessage,
       "onFinishedResponse": PaymentTypeHandler.onFinishedResponse,
+      "onChanged": PaymentTypeHandler.onChanged,
       "onLoading": PaymentTypeHandler.onLoading,
       "writeToFile": PaymentTypeHandler.writeToFile,
       "onAbortedSuccessfully": PaymentTypeHandler.onAbortedSuccessfully,

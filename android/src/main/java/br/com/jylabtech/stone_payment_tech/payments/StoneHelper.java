@@ -46,6 +46,9 @@ public class StoneHelper {
 
 
     public String getMessageFromTransactionAction(Action action) {
+        if (action == null) {
+            return "Em processamento. Aguarde.";
+        }
         switch (action) {
             case  TRANSACTION_WAITING_CARD:
                 return "Insira, passe ou aproxime o cartão.";
@@ -93,7 +96,7 @@ public class StoneHelper {
         }
     }
 
-    private InstalmentTransactionEnum getInstallment(int parc, boolean withInterest) {
+    InstalmentTransactionEnum getInstallment(int parc, boolean withInterest) {
     if(parc == 1){
         return InstalmentTransactionEnum.ONE_INSTALMENT;
     }
@@ -158,6 +161,9 @@ public class StoneHelper {
     }
 
     public String convertBitmapToString(Bitmap value) {
+        if (value == null) {
+            return "";
+        }
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         value.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
         byte[] byteArray = byteArrayOutputStream.toByteArray();
@@ -165,8 +171,16 @@ public class StoneHelper {
     }
 
 
+    /** Índice da opção (Alimentação/Refeição) escolhida no Dart; -1 se não houver lista ou opção. */
+    public static int optionIndex(List<String> options, String value) {
+        if (options == null || value == null) {
+            return -1;
+        }
+        return options.indexOf(value);
+    }
+
     public String getErrorFromErrorList(List<ErrorsEnum> list) {
-        if(list.isEmpty()) {
+        if(list == null || list.isEmpty()) {
             return "";
         }
         final ErrorsEnum error = list.get(0);
@@ -174,6 +188,9 @@ public class StoneHelper {
     }
 
     public String getErrorMessageFromErrorEnum(ErrorsEnum errorsEnum) {
+        if (errorsEnum == null) {
+            return "";
+        }
         String aux = "";
         switch (errorsEnum){
             case CARD_BLOCKED:

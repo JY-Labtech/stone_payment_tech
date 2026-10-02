@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:stone_payment_tech/src/app/handler/stone_stream_handler.dart';
 import 'package:stone_payment_tech/src/app/model/stone_credentials.dart';
@@ -13,6 +15,7 @@ class StonePrinterController {
 
   StoneTech get stone => StoneTech.I;
   late StoneTechCredentialsModel credentials;
+  StreamSubscription<StoneStatusTech>? _subscription;
 
   Future<void> initialize({
     required StoneTechCredentialsModel stoneCredentials,
@@ -50,7 +53,9 @@ class StonePrinterController {
     required Function(bool) onPop,
     required Function() onSuccess,
   }) {
-    handler.statusStream.listen((data) {
+    // Uma assinatura por vez: antes cada initialize somava um listener (onSuccess repetido).
+    _subscription?.cancel();
+    _subscription = handler.statusStream.listen((data) {
       if (data is StoneStatusTechActivate) {
         // Terminal ativado - Prosseguir com impressão
         StoneTech.isPinpadActivated = true;
@@ -126,6 +131,8 @@ class StonePrinterController {
   }
 
   void dispose() {
+    _subscription?.cancel();
+    _subscription = null;
     handler.dispose();
   }
 }

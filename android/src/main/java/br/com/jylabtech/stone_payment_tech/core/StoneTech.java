@@ -2,9 +2,16 @@ package br.com.jylabtech.stone_payment_tech.core;
 
 import br.com.jylabtech.stone_payment_tech.BuildConfig;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
+import br.com.jylabtech.stone_payment_tech.licence.LicenceResult;
 import br.com.jylabtech.stone_payment_tech.payments.PaymentsPresenter;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -18,167 +25,213 @@ public class StoneTech {
     final Context currentContext;
     private String TAG = "StoneTech";
     private boolean isDebugLogActive = false;
-    private String licenceKey;
+
+    public static final String LICENCE_ERROR_CODE = StoneMethodHandler.LICENCE_ERROR_CODE;
+    private final ExecutorService licenceExecutor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    /** Uma única instância (e um único EncryptedSharedPreferences) por engine. */
+    private final CheckLicenceTech licenceTech;
+    private final StoneMethodHandler handler;
 
     public StoneTech(Context context, MethodChannel channel) {
         this.currentContext = context;
         this.mChannel = channel;
+        this.licenceTech = new CheckLicenceTech(context);
+        this.handler = new StoneMethodHandler(
+                new StoneMethodHandler.LicenceSource() {
+                    @Override
+                    public boolean hasValidCachedLicence(String licenceKey, String licenceInternalKey) {
+                        return licenceTech.hasValidCachedLicence(licenceKey, licenceInternalKey);
+                    }
+
+                    @Override
+                    public LicenceResult validateLicence(String licenceKey, String licenceInternalKey) {
+                        return licenceTech.validateLicence(licenceKey, licenceInternalKey);
+                    }
+                },
+                new StoneMethodHandler.LicenceListener() {
+                    @Override
+                    public void onLicenceChecking() {
+                        presenter().notifyLicenceChecking();
+                    }
+
+                    @Override
+                    public void onLicenceResult(LicenceResult result) {
+                        if (result == null || !result.isSuccess()) {
+                            Log.i(TAG, "Licença inválida: método bloqueado");
+                        }
+                        presenter().notifyLicenceResult(result);
+                    }
+
+                    @Override
+                    public void onLicenceGranted(boolean granted) {
+                        presenter().setLicenceGranted(granted);
+                    }
+                },
+                actions,
+                licenceExecutor,
+                new Executor() {
+                    @Override
+                    public void execute(Runnable command) {
+                        mainHandler.post(command);
+                    }
+                },
+                BuildConfig.LICENCE_KEY,
+                BuildConfig.LICENCE_INTERNAL_KEY);
     }
 
-    public void initPayment(MethodCall call, MethodChannel.Result result) throws Exception {
+    private PaymentsPresenter presenter() {
         if (this.payment == null) {
-            this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive, this.currentContext);
+            this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive, this.currentContext, licenceTech);
         }
+        return this.payment;
+    }
 
+    public void initPayment(final MethodCall call, final MethodChannel.Result channelResult) {
         Log.i(TAG, "Call Method: " + call.method);
-        PaymentMethod paymentMethod = PaymentMethod.fromString(call.method);
-        if (paymentMethod == null) {
+        // Toda chamada é respondida exatamente uma vez (sucesso, erro ou notImplemented).
+        handler.handle(call.method, new MethodArgs() {
+            @Override
+            public <T> T argument(String key) {
+                return call.argument(key);
+            }
+        }, new FlutterReply(channelResult));
+    }
+
+    /** Operações do canal sobre o PaymentsPresenter atual. */
+    private final StoneActions actions = new StoneActions() {
+        @Override
+        public void activeDebugLog(boolean isDebugLog) {
+            // Antes recriava o PaymentsPresenter, perdendo o estado da transação
+            // em andamento (abort deixava de funcionar) sem liberar o anterior.
+            isDebugLogActive = isDebugLog;
+            presenter().setDebugLog(isDebugLog);
+        }
+
+        @Override
+        public String getPosSerialNumber() {
+            return presenter().getPosSerialNumber();
+        }
+
+        @Override
+        public String getPosManufacture() {
+            return presenter().getPosManufacture();
+        }
+
+        @Override
+        public void customPrinter(String printerParams) throws Exception {
+            presenter().customPrinter(printerParams, currentContext);
+        }
+
+        @Override
+        public void printFromBase64(String printerParams) throws Exception {
+            presenter().printFromBase64(printerParams, currentContext);
+        }
+
+        @Override
+        public void printWrapPaper(int lines) {
+            presenter().printWrapPaper(lines, currentContext);
+        }
+
+        @Override
+        public void getAllTransactions() {
+            presenter().getAllTransactions(currentContext);
+        }
+
+        @Override
+        public void reversal() {
+            presenter().onReversal(currentContext);
+        }
+
+        @Override
+        public void getTransactionByInitiatorTransactionKey(String initiatorTransactionKey) {
+            presenter().getTransactionByInitiatorTransactionKey(currentContext, initiatorTransactionKey);
+        }
+
+        @Override
+        public void printerCurrentTransaction(boolean printCustomerSlip) {
+            presenter().printerCurrentTransaction(currentContext, printCustomerSlip);
+        }
+
+        @Override
+        public void printerFromTransactionKey(String transactionKey) throws Exception {
+            presenter().printerFromTransactionKey(currentContext, transactionKey);
+        }
+
+        @Override
+        public void activate(String appName, String stoneCode) throws Exception {
+            presenter().activate(appName, stoneCode, currentContext);
+        }
+
+        @Override
+        public void activateWithCredentials(String appName, String stoneCode, String qrCodeAuthorization, String qrCodeProviderid) throws Exception {
+            presenter().activateWithCredentials(appName, stoneCode, qrCodeAuthorization, qrCodeProviderid, currentContext);
+        }
+
+        @Override
+        public void abortPix() {
+            presenter().abortPIXtransaction(currentContext);
+        }
+
+        @Override
+        public void abort() {
+            presenter().abortCurrentPosTransaction();
+        }
+
+        @Override
+        public void abortActivation() {
+            presenter().abortActivation();
+        }
+
+        @Override
+        public void setPaymentOption(String option) {
+            presenter().setPaymentOption(option);
+        }
+
+        @Override
+        public void cancelTransaction(int idFromBase) throws Exception {
+            presenter().cancelTransaction(currentContext, idFromBase);
+        }
+
+        @Override
+        public void doTransaction(String amount, int typeTransaction, String initiatorTransactionKey, int installment,
+                                  boolean withInterest, String qrCodeAuthorization, String qrCodeProviderid,
+                                  boolean printCustomerSlip, boolean printEstablishmentSlip) throws Exception {
+            presenter().doTransaction(currentContext, amount, typeTransaction, initiatorTransactionKey, installment,
+                    withInterest, qrCodeAuthorization, qrCodeProviderid, printCustomerSlip, printEstablishmentSlip);
+        }
+    };
+
+    /** Adapta o MethodChannel.Result do Flutter para MethodReply. */
+    private static final class FlutterReply implements MethodReply {
+        private final MethodChannel.Result result;
+
+        FlutterReply(MethodChannel.Result result) {
+            this.result = result;
+        }
+
+        @Override
+        public void success(Object value) {
+            result.success(value);
+        }
+
+        @Override
+        public void error(String code, String message, Object details) {
+            result.error(code, message, details);
+        }
+
+        @Override
+        public void notImplemented() {
             result.notImplemented();
-            return;
-        }
-
-        String licenceKeyLocal = BuildConfig.LICENCE_KEY;
-        String licenceInternalKey = BuildConfig.LICENCE_INTERNAL_KEY;
-
-        Log.i(TAG, "**Licença local: " + licenceKeyLocal);
-        this.licenceKey = licenceKeyLocal;
-
-
-        boolean resultLicence = this.payment.checkValidLicence(licenceKeyLocal, licenceInternalKey);
-        Log.i(TAG, "*resultLicence: " + resultLicence);
-        if(!resultLicence) {
-            throw new Exception("Sua licença não foi ativada.");
-        }
-
-        switch (paymentMethod) {
-            case PAYMENT_ACTIVE_DEBUG_LOG:
-                boolean isDebugLogParams = call.argument("isDebugLog");
-                isDebugLogActive = isDebugLogParams;
-                this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive, this.currentContext);
-                break;
-            case PAYMENT_GET_SERIAL_NUMBER:
-                String serialNumber = this.payment.getPosSerialNumber();
-                result.success(serialNumber);
-                break;
-            case PAYMENT_GET_MANUFACTURE:
-                String posManufacture = this.payment.getPosManufacture();
-                result.success(posManufacture);
-                break;
-            case PAYMENT_CUSTOM_PRINTER:
-                String printerParams = call.argument("printerParams");
-                this.payment.customPrinter(printerParams, currentContext);
-                break;
-
-            case PAYMENT_PRINT_BASE64:
-                String base64PrinterParams = call.argument("printerParams");
-                this.payment.printFromBase64(base64PrinterParams, currentContext);
-                break;
-
-            case PAYMENT_PRINT_WRAP_PAPER:
-                int lines = call.argument("lines");
-                this.payment.printWrapPaper(lines, currentContext);
-                break;
-
-            case PAYMENT_GET_ALL_TRANSACTIONS:
-                this.payment.getAllTransactions(currentContext);
-                break;
-
-            case PAYMENT_REVERSAL:
-                this.payment.onReversal(currentContext);
-                break;
-
-            case PAYMENT_GET_TRANSACTION_BY_INITIATOR_TRANSACTION_KEY:
-                String initiatorTransactionKey = call.argument("InitiatorTransactionKey");
-                this.payment.getTransactionByInitiatorTransactionKey(currentContext, initiatorTransactionKey);
-                break;
-
-            case PAYMENT_PRINTER_TRANSACTION:
-                boolean printCustomerSlip = call.argument("printCustomerSlip");
-                this.payment.printerCurrentTransaction(currentContext, printCustomerSlip);
-                break;
-
-            case PAYMENT_PRINTER_TRANSACTION_KEY:
-                String transactionKey = call.argument("paymentPrinterTransactionKey");
-                this.payment.printerFromTransactionKey(currentContext, transactionKey);
-                break;
-
-            case ACTIVE_PINPAD:
-                String appName = call.argument("appName");
-                String stoneCode = call.argument("stoneCode");
-                this.payment.activate(appName, stoneCode, currentContext);
-                break;
-
-            case ACTIVE_PINPAD_CREDENTIALS:
-                this.payment.activateWithCredentials(
-                    call.argument("appName"),
-                    call.argument("stoneCode"),
-                    call.argument("qrCodeAuthorization"),
-                    call.argument("qrCodeProviderid"),
-                    currentContext
-                );
-                break;
-
-            case PAYMENT_ABORT_PIX:
-                this.payment.abortPIXtransaction(currentContext);
-                break;
-
-            case PAYMENT_ABORT:
-                this.payment.abortCurrentPosTransaction();
-                break;
-
-            case PAYMENT_ABORT_ACTIVATION:
-                this.payment.abortActivation();
-                break;
-
-            case PAYMENT_OPTIONS:
-                this.payment.setPaymentOption(call.argument("option"));
-                break;
-
-            case PAYMENT_CANCEL_TRANSACTION:
-                int idFromBase = call.argument("idFromBase");
-                this.payment.cancelTransaction(currentContext, idFromBase);
-                break;
-
-            default:
-                String amount = call.argument("amount");
-                int parc = call.argument("installment");
-                boolean withInterest = call.argument("withInterest");
-                boolean withCustomerSlip = call.argument("printCustomerSlip");
-                boolean withEstablishmentSlip = call.argument("printEstablishmentSlip");
-                String initiatorKey = call.argument("initiatorTransactionKey");
-
-                switch (paymentMethod) {
-                    case PAYMENT_DEBIT:
-                        this.payment.doTransaction(currentContext, amount, 2, initiatorKey, parc, withInterest, null, null, withCustomerSlip, withEstablishmentSlip);
-                        break;
-
-                    case PAYMENT_PIX:
-                        String withQrCodeAuthorization = call.argument("qrCodeAuthorization");
-                        String withQrCodeProviderid = call.argument("qrCodeProviderid");
-                        this.payment.doTransaction(currentContext, amount, 3, initiatorKey, parc, withInterest,
-                                withQrCodeAuthorization, withQrCodeProviderid, withCustomerSlip, withEstablishmentSlip);
-                        break;
-
-                    case PAYMENT_CREDIT:
-                    case PAYMENT_CREDIT_PARC:
-                        this.payment.doTransaction(currentContext, amount, 1, initiatorKey, parc, withInterest, null, null, withCustomerSlip, withEstablishmentSlip);
-                        break;
-
-                    case PAYMENT_VOUCHER:
-                        this.payment.doTransaction(currentContext, amount, 4, initiatorKey, parc, withInterest, null, null, withCustomerSlip, withEstablishmentSlip);
-                        break;
-
-                    default:
-                        result.notImplemented();
-                        break;
-                }
-                break;
         }
     }
 
     public void dispose() {
+        licenceExecutor.shutdownNow();
+        mainHandler.removeCallbacksAndMessages(null);
         if (this.payment != null) {
             this.payment.dispose();
+            this.payment = null;
         }
     }
 }
