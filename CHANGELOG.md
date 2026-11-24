@@ -1,4 +1,4 @@
-## Não lançado
+## 3.2.0
 
 - Licença conforme o contrato do jylabtech_core (JYN-234): o cache offline vale por no máximo 72 horas (antes 7 dias) e só é usado quando o servidor não responde (sem internet, timeout, 408/429, 5xx ou resposta ilegível).
 - A primeira operação depois de abrir o app consulta o servidor, e a licença é revalidada a cada 4 horas de uso. O atalho sem rede do gate (e a 2ª barreira do caso de uso) só libera pelo cache quando nenhuma consulta é devida.

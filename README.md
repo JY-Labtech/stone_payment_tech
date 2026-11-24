@@ -227,7 +227,7 @@ Adicione a dependência:
 
 ```yaml
 dependencies:
-  stone_payment_tech: ^3.1.0
+  stone_payment_tech: ^3.2.0
 ```
 
 E importe a biblioteca principal:
