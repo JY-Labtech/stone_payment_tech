@@ -10,6 +10,10 @@ public class LicenceResult {
     // Começa como erro: só vira sucesso quando a licença for comprovadamente válida.
     private int result = RESULT_ERROR;
     private String message;
+    // true quando o servidor respondeu e recusou a licença de forma definitiva (4xx exceto 408/429,
+    // ou 200 com licença inutilizável). Nesse caso o cache é apagado e o uso é bloqueado na hora;
+    // falhas de rede, timeout, 408/429/5xx e corpo ilegível ficam false e podem usar o cache (até 72h).
+    private boolean rejectedByServer;
 
     public static LicenceResult success(CheckLicenceEntity entity) {
         LicenceResult r = new LicenceResult();
@@ -23,6 +27,21 @@ public class LicenceResult {
         r.setResult(RESULT_ERROR);
         r.setErrorMessage(errorMessage);
         return r;
+    }
+
+    /** Recusa definitiva do servidor (ver {@link #isRejectedByServer()}). */
+    public static LicenceResult rejected(String errorMessage) {
+        LicenceResult r = error(errorMessage);
+        r.setRejectedByServer(true);
+        return r;
+    }
+
+    public boolean isRejectedByServer() {
+        return rejectedByServer;
+    }
+
+    public void setRejectedByServer(boolean value) {
+        this.rejectedByServer = value;
     }
 
     public boolean isSuccess() {

@@ -97,7 +97,9 @@ public class PaymentsUseCase {
     // Durante o despacho de um método liberado pelo gate não relê o cache: isso
     // evita outra leitura do EncryptedSharedPreferences e respeita a regra de que
     // a licença confirmada pelo servidor libera a operação mesmo se o cache não
-    // pôde ser salvo. Fora do despacho, só o cache válido libera (sem rede).
+    // pôde ser salvo. Fora do despacho, só o cache válido libera (sem rede) e apenas
+    // quando nenhuma consulta ao servidor é devida (validada online neste processo há
+    // menos de 4h ou servidor fora do ar há menos de 5 min); recusa do servidor apaga o cache.
     if (licenceGranted) {
       return true;
     }

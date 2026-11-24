@@ -1,3 +1,10 @@
+## Não lançado
+
+- Licença conforme o contrato do jylabtech_core (JYN-234): o cache offline vale por no máximo 72 horas (antes 7 dias) e só é usado quando o servidor não responde (sem internet, timeout, 408/429, 5xx ou resposta ilegível).
+- A primeira operação depois de abrir o app consulta o servidor, e a licença é revalidada a cada 4 horas de uso. O atalho sem rede do gate (e a 2ª barreira do caso de uso) só libera pelo cache quando nenhuma consulta é devida.
+- Recusa do servidor (cliente bloqueado, licença vencida/cancelada/suspensa, não encontrada, aparelho desativado) apaga o cache e bloqueia na hora; `reason: customer_blocked` exibe "Cliente bloqueado. Entre em contato com a JY Labtech.".
+- Após falha de rede, espera 5 minutos antes de tentar o servidor de novo (usa o cache), para não travar cada operação offline no timeout.
+
 ## 3.1.0
 
 - **Validação de licença mais rígida.** A URL de validação fica travada no servidor oficial (`https://licence-server.invalid/pos-payments/licence/check`): o `licenceInternalKey` passa a ser opcional e qualquer valor fora desse servidor (inclusive o antigo do Cloud Run, http sem TLS ou outro host) é ignorado; o build não exige mais `licenceInternalKey`
