@@ -171,8 +171,10 @@ O resultado da validação chega no handler com `method: "licence"` (`result == 
 ### Identificação do aparelho e cache offline
 
 - O aparelho é identificado pelo `ANDROID_ID` (identificador principal) e, quando disponível, pelo número de série.
-- Só uma resposta HTTP 200 com licença **válida e ativa** (`expiredAt` no futuro, sem `isExpired`, `isInactive` ou `isCanceled`) libera o uso. Qualquer outra resposta, timeout ou falha de rede é erro.
-- Após uma validação online bem-sucedida, a licença fica guardada **criptografada** no aparelho e é usada offline até o vencimento (`expiredAt`), por **no máximo 7 dias** sem nova consulta ao servidor. O cache é descartado se a chave mudar, se tiver sido validado em outro servidor ou se o relógio do aparelho estiver adiantado/atrasado em relação à data salva. Depois disso o aparelho precisa de internet para revalidar.
+- Só uma resposta HTTP 200 com licença **válida e ativa** (`expiredAt` no futuro, sem `isExpired`, `isInactive` ou `isCanceled`) libera o uso. Qualquer outra resposta é erro; timeout, falha de rede, 408/429 e 5xx só liberam pelo cache offline (abaixo).
+- **Revalidação**: a primeira operação depois de abrir o app sempre consulta o servidor; depois, a licença é consultada de novo a cada **4 horas** de uso.
+- **Bloqueio imediato**: se o servidor recusar a licença (cliente bloqueado no portal, licença vencida, cancelada ou suspensa, não encontrada, aparelho desativado ou limite de aparelhos), o cache é apagado e as operações passam a falhar com `LICENCE_ERROR` na hora.
+- **Cache offline**: após uma validação online bem-sucedida, a licença fica guardada **criptografada** no aparelho. Ela só é usada quando o servidor não responde (sem internet, timeout, 408/429 ou erro 5xx) e por **no máximo 72 horas** desde a última validação online, desde que a licença continue dentro da validade (`expiredAt`). Depois de uma falha de rede o plugin espera 5 minutos antes de tentar o servidor de novo. O cache é descartado se a chave mudar, se tiver sido validado em outro servidor ou se o relógio do aparelho estiver adiantado/atrasado em relação à data salva. Depois disso o aparelho precisa de internet para revalidar.
 - A validação online roda em background (timeout de 15 s), sem travar a interface.
 - Se o servidor confirmar a licença válida e ativa mas o aparelho não conseguir salvar o cache (falha do EncryptedSharedPreferences/Keystore), a operação é liberada mesmo assim; o erro é registrado no log e a próxima operação revalida online.
 
@@ -194,7 +196,7 @@ A mensagem exibida (`errorMessage`) é a retornada pelo servidor. Falhas de rede
 - **`LICENCE_ERROR`**: a validação falhou; veja a `message` da exceção (ou o `errorMessage` do evento `licence`) e a tabela acima.
 - **Funciona no debug mas não no aparelho novo**: verifique o limite de aparelhos da licença (o plano `debug` permite 2).
 - **Trocou a chave e nada mudou**: as chaves são embutidas no build; rode `flutter clean` e gere o app novamente.
-- **Sem internet**: o aparelho só funciona offline se tiver validado online nos últimos 7 dias e a licença não tiver vencido.
+- **Sem internet**: o aparelho só funciona offline se tiver validado online nas últimas 72 horas e a licença não tiver vencido.
 
 ### ✅ Máquinas compatíveis
 

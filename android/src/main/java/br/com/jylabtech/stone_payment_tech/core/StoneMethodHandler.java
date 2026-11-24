@@ -9,8 +9,12 @@ import br.com.jylabtech.stone_payment_tech.licence.LicenceResult;
  * (testável na JVM):
  * <ol>
  *   <li>método desconhecido → {@code notImplemented} (sem consultar licença);</li>
- *   <li>gate de licença: cache local válido (sem rede, na thread atual) ou
- *       validação online no executor de background;</li>
+ *   <li>gate de licença: atalho sem rede na thread atual só quando nenhuma
+ *       consulta ao servidor é devida (cache válido já validado online neste
+ *       processo há menos de 4h, ou servidor fora do ar há menos de 5 min; ver
+ *       {@code CheckLicenceTech.hasValidCachedLicence}); senão
+ *       {@code validateLicence} no executor de background (abertura do app,
+ *       revalidação de 4h, recusa do servidor ou falha de rede com cache de até 72h);</li>
  *   <li>licença inválida → {@code error("LICENCE_ERROR")} e o SDK NÃO é chamado;</li>
  *   <li>licença válida → {@link MethodDispatcher} na thread principal.</li>
  * </ol>
@@ -22,6 +26,10 @@ public final class StoneMethodHandler {
 
     /** Fonte da licença (em produção, CheckLicenceTech). */
     public interface LicenceSource {
+        /**
+         * Atalho sem rede (thread atual): true só quando a validação também liberaria
+         * sem consultar o servidor agora. Não pode bloquear.
+         */
         boolean hasValidCachedLicence(String licenceKey, String licenceInternalKey);
 
         /** Bloqueante (rede): roda no executor de background. */

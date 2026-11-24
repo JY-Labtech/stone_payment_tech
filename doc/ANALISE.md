@@ -9,7 +9,9 @@ Dart StonePayment.xxx()  ──invokeMethod──▶  StoneTechFlutterPlugin.onM
                                                └─ StoneTech.initPayment (glue Android)
                                                     └─ StoneMethodHandler.handle   (puro, testado na JVM)
                                                          1. método desconhecido → notImplemented
-                                                         2. gate de licença: cache válido (sem rede) ou
+                                                         2. gate de licença: atalho sem rede só se nenhuma consulta
+                                                            é devida (validada online neste processo há < 4h ou
+                                                            servidor fora do ar há < 5 min); senão
                                                             CheckLicenceTech.validateLicence em background
                                                          3. inválida → error("LICENCE_ERROR"), SDK não é chamado
                                                          4. válida → MethodDispatcher.dispatch (main thread)
@@ -117,6 +119,8 @@ Exemplo:
 | Código morto removido | `checkValidLicence` (bloqueante, sem uso), `PaymentsPresenter.hasValidCachedLicence/validateLicence`, campos `licenceTech/gson/hasAborted/countPassword/isDebugLog` do presenter, imports duplicados |
 
 Nada mudou em nomes de prefs, formato do cache ou regras de licença (`LicenceRules`/`LicenceConfig` intocados; os 53 testes de licença seguem passando).
+
+**Atualização (JYN-234, contrato do jylabtech_core):** as regras de licença mudaram depois desta análise. O cache offline vale no máximo 72h (antes 7 dias) e só é usado quando o servidor não responde (rede, timeout, 408/429/5xx, corpo ilegível); a primeira validação de cada processo sempre consulta o servidor e, em uso, revalida a cada 4h; recusa definitiva (4xx exceto 408/429, ou 200 com licença inutilizável, inclusive `reason: customer_blocked`) apaga o cache e bloqueia na hora; após falha de rede espera 5 min antes de tentar de novo. `hasValidCachedLicence` (atalho do gate e da 2ª barreira) só devolve true quando `validateLicence` também liberaria sem rede. Nomes de prefs e formato do cache não mudaram.
 
 ## 5. Testes
 

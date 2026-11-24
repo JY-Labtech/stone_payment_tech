@@ -14,7 +14,18 @@ import java.util.concurrent.TimeUnit;
  */
 public final class LicenceRules {
 
-    public static final long LOCAL_CACHE_MAX_AGE_MS = TimeUnit.DAYS.toMillis(7);
+    /**
+     * Validade máxima do cache offline sem nova consulta bem-sucedida ao servidor (contrato de
+     * licenças do jylabtech_core: no máximo 72h; igual ao TTL do token assinado).
+     */
+    public static final long CACHE_MAX_AGE_MS = TimeUnit.HOURS.toMillis(72);
+    /** Com cache válido, consulta o servidor de novo depois deste intervalo (em uso). */
+    public static final long REVALIDATE_INTERVAL_MS = TimeUnit.HOURS.toMillis(4);
+    /** Depois de uma falha de rede, espera este tempo antes de tentar o servidor de novo (usa o cache). */
+    public static final long RETRY_AFTER_FAILURE_MS = TimeUnit.MINUTES.toMillis(5);
+    /** Motivo do core para cliente bloqueado/banido (bloqueio total imediato). */
+    public static final String REASON_CUSTOMER_BLOCKED = "customer_blocked";
+    public static final String MSG_CUSTOMER_BLOCKED = "Cliente bloqueado. Entre em contato com a JY Labtech.";
     public static final long CLOCK_SKEW_TOLERANCE_MS = TimeUnit.MINUTES.toMillis(5);
 
     public static final String MSG_INVALID_RESPONSE = "Resposta inválida do servidor de licença";
@@ -39,8 +50,30 @@ public final class LicenceRules {
     }
 
     /**
+     * Indica se uma resposta HTTP diferente de 200 é uma recusa definitiva do servidor (licença
+     * não encontrada, vencida, cancelada, suspensa, cliente bloqueado, aparelho desativado, limite
+     * de aparelhos, requisição inválida). 408, 429, 5xx e outros códigos são tratados como falha
+     * temporária (servidor fora do ar), que pode usar o cache offline.
+     */
+    public static boolean isDefinitiveRejection(int statusCode) {
+        return statusCode >= 400 && statusCode < 500 && statusCode != 408 && statusCode != 429;
+    }
+
+    /**
+     * Indica se é hora de consultar o servidor: sem cache, na primeira validação deste processo
+     * (abertura do app) ou quando a última consulta online tem mais de {@link #REVALIDATE_INTERVAL_MS}.
+     */
+    public static boolean shouldRevalidate(CheckLicenceEntity cache, boolean checkedOnlineInThisProcess, Date now) {
+        if (cache == null || !checkedOnlineInThisProcess || now == null) {
+            return true;
+        }
+        Date savedAt = cache.getSavedLocalDatabaseAt();
+        return savedAt == null || now.getTime() - savedAt.getTime() >= REVALIDATE_INTERVAL_MS;
+    }
+
+    /**
      * O cache offline só vale se a licença for utilizável, tiver sido salva
-     * há no máximo 7 dias (e não no futuro), for da mesma chave e tiver sido
+     * há no máximo 72h (e não no futuro), for da mesma chave e tiver sido
      * validada no mesmo servidor oficial.
      */
     public static boolean isCacheValid(CheckLicenceEntity cache, String licenceKey, String licenceInternalKey, Date now) {
@@ -55,7 +88,7 @@ public final class LicenceRules {
         if (age < -CLOCK_SKEW_TOLERANCE_MS) {
             return false; // salvo "no futuro": relógio adulterado
         }
-        if (age > LOCAL_CACHE_MAX_AGE_MS) {
+        if (age > CACHE_MAX_AGE_MS) {
             return false;
         }
         if (licenceKey == null || licenceKey.isEmpty() || !licenceKey.equals(cache.getLicenceEncrypt())) {
@@ -70,20 +103,28 @@ public final class LicenceRules {
 
     /**
      * Decide o resultado de uma resposta HTTP do servidor de licença.
-     * Só HTTP 200 com licença utilizável é sucesso.
+     * Só HTTP 200 com licença utilizável é sucesso. {@link LicenceResult#isRejectedByServer()}
+     * indica recusa definitiva (4xx exceto 408/429, ou 200 com licença lida mas inutilizável);
+     * corpo 200 ilegível (ex.: página de proxy) não é recusa.
      */
     public static LicenceResult evaluateHttpResponse(int statusCode, String body, Date now) {
         if (statusCode == 200) {
             CheckLicenceEntity entity = CheckLicenceEntity.fromJson(body);
-            if (entity == null || entity.getExpiredAt() == null) {
+            if (entity == null) {
+                // Corpo ilegível (ex.: página de erro de proxy) não é recusa da licença.
                 return LicenceResult.error(MSG_INVALID_RESPONSE);
             }
+            if (entity.getExpiredAt() == null) {
+                return LicenceResult.rejected(MSG_INVALID_RESPONSE);
+            }
             if (!isLicenceUsable(entity, now)) {
-                return LicenceResult.error(MSG_NOT_USABLE);
+                return LicenceResult.rejected(MSG_NOT_USABLE);
             }
             return LicenceResult.success(entity);
         }
-        return LicenceResult.error(extractErrorMessage(statusCode, body));
+        LicenceResult result = LicenceResult.error(extractErrorMessage(statusCode, body));
+        result.setRejectedByServer(isDefinitiveRejection(statusCode));
+        return result;
     }
 
     static String extractErrorMessage(int statusCode, String body) {
@@ -93,6 +134,9 @@ public final class LicenceRules {
         }
         try {
             JSONObject json = new JSONObject(body);
+            if (REASON_CUSTOMER_BLOCKED.equals(json.optString("reason", ""))) {
+                return MSG_CUSTOMER_BLOCKED;
+            }
             if (json.has("message") && !json.isNull("message")) {
                 String message = json.optString("message", "").trim();
                 if (!message.isEmpty()) {
