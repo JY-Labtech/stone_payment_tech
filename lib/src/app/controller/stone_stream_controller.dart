@@ -173,13 +173,12 @@ class StoneStreamController {
   }
 
   /// As operações respondem assim que são disparadas e o resultado chega pelo
-  /// stream. Sem `await`, um erro do canal (`LICENCE_ERROR`/`ERROR`) virava
-  /// exceção assíncrona não tratada; agora é logado e, se não for de licença
-  /// (que já chega no stream como [StoneStatusTechActivateError]), vira mensagem.
+  /// stream. Sem `await`, um erro do canal (`ERROR`) virava exceção assíncrona
+  /// não tratada; agora é logado e vira mensagem de status.
   void _fireAndForget(Future<dynamic> operation) {
     operation.then<void>((_) {}, onError: (Object e) {
       log('StoneStreamController: $e');
-      if (e is PlatformException && e.code != 'LICENCE_ERROR') {
+      if (e is PlatformException) {
         handler?.setStatus(e.message ?? 'Erro ao executar a operação');
       }
     });

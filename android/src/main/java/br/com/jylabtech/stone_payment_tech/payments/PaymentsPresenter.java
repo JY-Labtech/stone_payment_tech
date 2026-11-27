@@ -7,8 +7,6 @@ import android.content.Context;
 import java.util.HashMap;
 import java.util.Map;
 
-import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
-import br.com.jylabtech.stone_payment_tech.licence.LicenceResult;
 import io.flutter.plugin.common.MethodChannel;
 import io.reactivex.disposables.Disposable;
 import stone.utils.keys.StoneKeyType;
@@ -22,23 +20,13 @@ public class PaymentsPresenter {
     private Context context;
 
     public PaymentsPresenter(MethodChannel channel, boolean isDebugLog, Context context1) {
-        this(channel, isDebugLog, context1, new CheckLicenceTech(context1));
-    }
-
-    /** Reaproveita a mesma instância de licença (e de EncryptedSharedPreferences) do plugin. */
-    public PaymentsPresenter(MethodChannel channel, boolean isDebugLog, Context context1, CheckLicenceTech licenceTech) {
         this.context = context1;
-        this.mUseCase = new PaymentsUseCase(channel, isDebugLog, context1, licenceTech);
+        this.mUseCase = new PaymentsUseCase(channel, isDebugLog, context1);
         this.mFragment = new PaymentsFragment(channel);
     }
 
     public void setDebugLog(boolean isDebugLog) {
         mUseCase.setDebugLog(isDebugLog);
-    }
-
-    /** 2ª barreira de licença: liberada pelo gate somente durante o despacho do método. */
-    public void setLicenceGranted(boolean granted) {
-        mUseCase.setLicenceGranted(granted);
     }
 
     public void doTransaction(Context context,
@@ -141,13 +129,6 @@ public class PaymentsPresenter {
         return mUseCase.getPosManufacture();
     }
 
-    public void notifyLicenceChecking() {
-        this.mUseCase.notifyLicenceChecking();
-    }
-
-    public void notifyLicenceResult(LicenceResult result) {
-        this.mUseCase.notifyLicenceResult(result);
-    }
 
 
 

@@ -1,3 +1,18 @@
+## 4.0.0
+
+- **BREAKING: licença e cobrança removidas.** O plugin não valida mais licença nem faz chamadas HTTP a servidores da JY Labtech; toda operação chama o SDK da Stone direto.
+  - Removido `StonePayment.checkLicence()` (e o método `checkLicence` do canal, que agora responde `notImplemented`).
+  - Removida a constante `licenceCheck` (e o arquivo `src/licence/`). `CHANNEL_NAME` e `USER_REFERENCE` continuam exportados (agora em `src/constants/`).
+  - Removidos o código de erro `LICENCE_ERROR`, o evento `onFinishedResponse` com `method: "licence"` e as mensagens "Verificando licença" / "Licença ativada".
+  - Build Android: não lê mais `licenceKey`/`licenceInternalKey` (`local.properties`, `LICENCE_KEY`, `LICENCE_INTERNAL_KEY`) e não falha mais com `LicenceKey não encontrado!!`. Pode apagar essas linhas.
+  - Nativo: removidas as classes de licença (`CheckLicenceTech`, `LicenceConfig`, `LicenceRules`, `LicenceResult`, `EncryptedLicenceStorage` etc.) e o gate por operação. Removidas as dependências `okhttp` e `androidx.security:security-crypto`.
+- **Open source sob a licença MIT** (antes BSD-3-Clause).
+- README reescrito: instalação, configuração do token do PackageCloud da Stone, flavors, referência completa da API, exemplos por operação, erros, testes e migração.
+- Build Android: o repositório do PackageCloud só é adicionado quando há token (`PACKAGECLOUD_READ_TOKEN` ou `packageCloudReadToken`); sem token o Gradle mostra um aviso. O repositório interno (`packageCloudReadTokenInternal`) é opcional.
+- Build Android: removidos os `signingConfigs` dos flavors do módulo do plugin (biblioteca não é assinada); a pasta `android/keys/` deixou de ser usada.
+- Example: Stone Code e credenciais PIX lidos de `--dart-define` (`STONE_CODE`, `APP_NAME`, `QRCODE_AUTHORIZATION`, `QRCODE_PROVIDER_ID`), com aviso na tela quando `STONE_CODE` não é informado; assinatura do fabricante opcional (`key.properties`).
+- pubspec: descrição em inglês, `homepage`, `issue_tracker` e `topics`; `flutter >= 3.13.0`.
+
 ## 3.2.0
 
 - Licença conforme o contrato do jylabtech_core (JYN-234): o cache offline vale por no máximo 72 horas (antes 7 dias) e só é usado quando o servidor não responde (sem internet, timeout, 408/429, 5xx ou resposta ilegível).

@@ -1,11 +1,19 @@
 name: stone_payment_tech
-description: Plugin Flutter para integrar sua aplicação com o SDK Android da Stone para meios de pagamento.
-version: 3.2.0
+description: Flutter plugin for the Stone Android Smart POS SDK (credit, debit, PIX, voucher, cancel, reversal and printing) on Sunmi, Positivo, Gertec, Ingenico and Tectoy.
+version: 4.0.0
+homepage: https://github.com/JY-Labtech/stone_payment_tech
 repository: https://github.com/JY-Labtech/stone_payment_tech
+issue_tracker: https://github.com/JY-Labtech/stone_payment_tech/issues
+topics:
+  - payment
+  - pos
+  - android
+  - flutter-plugin
+  - brazil
 
 environment:
   sdk: ">=3.1.5 <4.0.0"
-  flutter: ">=2.5.0"
+  flutter: ">=3.13.0"
 
 dependencies:
   flutter:

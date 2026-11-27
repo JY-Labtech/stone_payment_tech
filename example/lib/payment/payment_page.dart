@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:stone_payment_tech/stone_payment_tech.dart';
 
+import '../config.dart';
 import 'payment_controller.dart';
 
 class PaymentPage extends StatefulWidget {
@@ -190,7 +191,7 @@ class _PaymentPageState extends State<PaymentPage> {
                         setState(() {
                           controller.clickPayment = true;
                         });
-                        StoneTech.I.payment.activePinpad(appName: 'AppDemo', stoneCode: '***REMOVIDO***');
+                        StoneTech.I.payment.activePinpad(appName: ExampleConfig.appName, stoneCode: ExampleConfig.stoneCode);
                       },
                       icon: const Icon(Icons.nfc),
                       label: const Text("Ativar PINPAD"),

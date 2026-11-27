@@ -31,9 +31,7 @@ public class StoneTechFlutterPlugin
 
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-    // Antes só métodos iniciados por "payment" chegavam ao StoneTech, então
-    // "checkLicence" respondia notImplemented. Métodos desconhecidos continuam
-    // respondendo notImplemented (StoneMethodHandler).
+    // Métodos desconhecidos respondem notImplemented (StoneMethodHandler).
     final StoneTech current = stoneTech;
     if (current == null) {
       result.error("ERROR", "Plugin desanexado da engine", null);

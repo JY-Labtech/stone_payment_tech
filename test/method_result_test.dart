@@ -98,6 +98,6 @@ void main() {
   test('import antigo stone_tech_payment.dart exporta a mesma API', () {
     expect(legacy.StoneTech.channelName, StoneTech.channelName);
     expect(identical(legacy.StoneTech.I, StoneTech.I), isTrue);
-    expect(legacy.licenceCheck, licenceCheck);
+    expect(legacy.CHANNEL_NAME, CHANNEL_NAME);
   });
 }

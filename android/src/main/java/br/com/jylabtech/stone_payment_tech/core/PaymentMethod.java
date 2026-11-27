@@ -23,8 +23,7 @@ enum PaymentMethod {
     PAYMENT_PRINT_WRAP_PAPER("paymentPrintWrapPaper"),
     PAYMENT_ACTIVE_DEBUG_LOG("paymentActiveDebugLog"),
     PAYMENT_GET_SERIAL_NUMBER("paymentGetSerialNumber"),
-    PAYMENT_GET_MANUFACTURE("paymentGetManufacture"),
-    CHECK_LICENCE("checkLicence");
+    PAYMENT_GET_MANUFACTURE("paymentGetManufacture");
 
 
     private final String method;

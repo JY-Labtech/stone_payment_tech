@@ -71,6 +71,10 @@ android {
         ndk.abiFilters = ['armeabi-v7a', 'arm64-v8a']
     }
 
+    // Assinatura opcional: só usa o keystore do fabricante se example/android/key.properties
+    // existir (com positivoFile etc.). Sem ele, o debug usa a chave de debug padrão.
+    def hasPositivoKeystore = keystoreProperties['positivoFile'] != null
+
     signingConfigs {
         positivo {
             keyAlias keystoreProperties['positivoAlias']
@@ -84,15 +88,17 @@ android {
         debug{
             shrinkResources false
             minifyEnabled false
-            signingConfig signingConfigs.positivo
+            if (hasPositivoKeystore) {
+                signingConfig signingConfigs.positivo
+            }
         }
         profile{
-            signingConfig signingConfigs.positivo
+            signingConfig hasPositivoKeystore ? signingConfigs.positivo : signingConfigs.debug
         }
         release {
             shrinkResources false
             minifyEnabled false
-            signingConfig signingConfigs.positivo
+            signingConfig hasPositivoKeystore ? signingConfigs.positivo : signingConfigs.debug
         }
     }
 }

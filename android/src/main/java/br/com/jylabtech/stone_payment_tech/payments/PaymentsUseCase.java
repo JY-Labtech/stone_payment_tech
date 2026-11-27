@@ -5,12 +5,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import br.com.jylabtech.stone_payment_tech.BuildConfig;
 import br.com.jylabtech.stone_payment_tech.core.ActionResult;
 import br.com.jylabtech.stone_payment_tech.core.BasicResult;
-import br.com.jylabtech.stone_payment_tech.core.StoneMethodHandler;
-import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
-import br.com.jylabtech.stone_payment_tech.licence.LicenceResult;
 import br.com.jylabtech.stone_payment_tech.printer.StonePrinter;
 import com.google.gson.Gson;
 
@@ -57,11 +53,8 @@ public class PaymentsUseCase {
   List<TransactionObject> transactionObjects;
   private boolean isAbortRunning = false;
   private boolean isActivationRunning = false;
-  /** Liberado pelo gate de licença (StoneMethodHandler) apenas durante o despacho do método. */
-  private volatile boolean licenceGranted = false;
 
   private Context context;
-  private CheckLicenceTech licenceTech;
   Gson gson = null;
   
   private static final int ACTIVATION_TIMEOUT_MS = 60000; // 60 segundos
@@ -71,44 +64,16 @@ public class PaymentsUseCase {
 
 
   public PaymentsUseCase(MethodChannel channel, boolean isDebugLog, Context context1) {
-    this(channel, isDebugLog, context1, new CheckLicenceTech(context1));
-  }
-
-  public PaymentsUseCase(MethodChannel channel, boolean isDebugLog, Context context1, CheckLicenceTech licenceTech) {
     this.mFragment = new PaymentsFragment(channel);
     this.mStonePrinter = new StonePrinter(channel);
     this.mStoneHelper = new StoneHelper();
     this.isDebugLog = isDebugLog;
     this.context = context1;
-    this.licenceTech = licenceTech;
     this.timeoutHandler = new Handler(Looper.getMainLooper());
   }
 
   public void setDebugLog(boolean isDebugLog) {
     this.isDebugLog = isDebugLog;
-  }
-
-  public void setLicenceGranted(boolean granted) {
-    this.licenceGranted = granted;
-  }
-
-  private boolean isValidLicence() throws Exception {
-    // Segunda barreira (a primeira fica no StoneMethodHandler antes de cada método).
-    // Durante o despacho de um método liberado pelo gate não relê o cache: isso
-    // evita outra leitura do EncryptedSharedPreferences e respeita a regra de que
-    // a licença confirmada pelo servidor libera a operação mesmo se o cache não
-    // pôde ser salvo. Fora do despacho, só o cache válido libera (sem rede) e apenas
-    // quando nenhuma consulta ao servidor é devida (validada online neste processo há
-    // menos de 4h ou servidor fora do ar há menos de 5 min); recusa do servidor apaga o cache.
-    if (licenceGranted) {
-      return true;
-    }
-    boolean result = licenceTech.hasValidCachedLicence(BuildConfig.LICENCE_KEY, BuildConfig.LICENCE_INTERNAL_KEY);
-    if(result) {
-       return true;
-    }
-
-    throw new Exception("Licença inválida ou não foi inicializada!");
   }
 
   private Gson getGson() {
@@ -128,7 +93,6 @@ public class PaymentsUseCase {
                               boolean printCustomerSlip,
                               boolean printEstablishmentSlip
                               ) throws Exception {
-    isValidLicence();
     isAbortRunning = false;
     if(stoneKeys == null) {
       checkUserModel(context);
@@ -266,7 +230,6 @@ public class PaymentsUseCase {
           boolean printCustomerSlip,
           boolean printEstablishmentSlip
   ) throws Exception {
-    isValidLicence();
 
     BasicResult basicResult = new BasicResult();
     basicResult.setMethod("transaction");
@@ -393,7 +356,6 @@ public class PaymentsUseCase {
   }
 
   public void printerFromTransactionKey(Context context, String transactionKey) throws Exception {
-    isValidLicence();
     TransactionDAO transactionDAO = new TransactionDAO(context);
     TransactionObject transactionObject = transactionDAO.findTransactionWithInitiatorTransactionKey(transactionKey);
     if(transactionObject == null) return;
@@ -538,7 +500,6 @@ public class PaymentsUseCase {
           String stoneCode,
           Context context
   ) throws Exception {
-    isValidLicence();
     try {
       BasicResult basicResult = new BasicResult();
       String serialNumber = getSerialNumber();
@@ -616,7 +577,6 @@ public class PaymentsUseCase {
           Map<StoneKeyType, String> stoneKeys,
           Context context
   ) throws Exception {
-    isValidLicence();
     try {
       BasicResult basicResult = new BasicResult();
       if(isDebugLog) {
@@ -685,7 +645,6 @@ public class PaymentsUseCase {
   }
 
   public void cancelTransaction(Context context, int idFromBase) throws Exception {
-    isValidLicence();
     if(isDebugLog) {
       Log.d("print", "*** cancelTransaction");
     }
@@ -714,7 +673,6 @@ public class PaymentsUseCase {
   }
 
   public void cancelTransactionPIX(Context context) throws Exception {
-    isValidLicence();
     if(isDebugLog) {
     Log.d("print", "****** cancelTransactionPIX");
     }
@@ -1037,7 +995,6 @@ public class PaymentsUseCase {
 
 
     public void customPrinter(String params, Context context) throws Exception {
-      isValidLicence();
       if(isDebugLog) {
       Log.d("print", "**** customPrinter");
       }
@@ -1045,7 +1002,6 @@ public class PaymentsUseCase {
     }
 
     public void printFromBase64(String params, Context context) throws Exception {
-      isValidLicence();
       if(isDebugLog) {
       Log.d("print", "**** printFromBase64");
       }
@@ -1109,31 +1065,5 @@ public class PaymentsUseCase {
     } catch (Throwable e) {
       return false;
     }
-  }
-
-  public void notifyLicenceChecking() {
-    this.mFragment.onMessage("Verificando licença");
-  }
-
-  /** Envia ao Flutter o resultado da licença (mesmos eventos das versões anteriores). */
-  public void notifyLicenceResult(LicenceResult resultLicence) {
-    BasicResult result = new BasicResult();
-    result.setMethod("licence");
-    if (resultLicence != null && resultLicence.isSuccess()) {
-      this.mFragment.onMessage("Licença ativada");
-      result.setResult(0);
-      result.setMessage("Licença ativada com sucesso");
-      this.mFragment.onFinishedResponse(convertBasicResultToJson(result));
-      return;
-    }
-    String errorMessage = licenceErrorMessage(resultLicence);
-    this.mFragment.onMessage(errorMessage);
-    result.setResult(999999);
-    result.setErrorMessage(errorMessage);
-    this.mFragment.onFinishedResponse(convertBasicResultToJson(result));
-  }
-
-  public static String licenceErrorMessage(LicenceResult resultLicence) {
-    return StoneMethodHandler.licenceErrorMessage(resultLicence);
   }
 }

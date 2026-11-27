@@ -51,20 +51,19 @@ final _paymentDefaults = {
 };
 
 final _cases = <_Case>[
-  _Case('checkLicence', (p) => p.checkLicence(), 'checkLicence', null),
   _Case('reversal', (p) => p.reversal(), 'paymentReversal', null, onError: _OnError.returnsFalse),
   _Case(
     'activePinpad',
-    (p) => p.activePinpad(appName: 'Loja', stoneCode: '***REMOVIDO***'),
+    (p) => p.activePinpad(appName: 'Loja', stoneCode: '123456789'),
     'paymentActivePinpad',
-    {'appName': 'Loja', 'stoneCode': '***REMOVIDO***'},
+    {'appName': 'Loja', 'stoneCode': '123456789'},
     onError: _OnError.returnsFalse,
   ),
   _Case(
     'activePinpadWithCredentials',
-    (p) => p.activePinpadWithCredentials(appName: 'Loja', stoneCode: '***REMOVIDO***', qrCodeAuthroization: 'tok', qrCodeProviderid: 'prov'),
+    (p) => p.activePinpadWithCredentials(appName: 'Loja', stoneCode: '123456789', qrCodeAuthroization: 'tok', qrCodeProviderid: 'prov'),
     'paymentActivePinpadCredentials',
-    {'appName': 'Loja', 'stoneCode': '***REMOVIDO***', 'qrCodeAuthorization': 'tok', 'qrCodeProviderid': 'prov', 'printCustomerSlip': true},
+    {'appName': 'Loja', 'stoneCode': '123456789', 'qrCodeAuthorization': 'tok', 'qrCodeProviderid': 'prov', 'printCustomerSlip': true},
     onError: _OnError.returnsFalse,
   ),
   _Case(
@@ -159,8 +158,7 @@ void main() {
     final expected = PaymentTypeCall.values
         .where((t) => ![PaymentTypeCall.lastTransaction, PaymentTypeCall.refund, PaymentTypeCall.pinpadAuthenticated].contains(t))
         .map((t) => t.method)
-        .toSet()
-      ..add('checkLicence');
+        .toSet();
     expect(methods, expected);
   });
 
@@ -180,7 +178,7 @@ void main() {
         expect(result, c.expected);
       });
 
-      for (final code in ['ERROR', 'LICENCE_ERROR']) {
+      for (final code in ['ERROR']) {
         test('(c) $code não vira sucesso', () async {
           mockNative((_) => throw PlatformException(code: code, message: 'falhou'));
           if (c.onError == _OnError.returnsFalse) {
@@ -198,9 +196,8 @@ void main() {
     expect(await payment.reversal(), isFalse);
   });
 
-  test('checkLicence com resposta nula devolve false', () async {
-    mockNative((_) => null);
-    expect(await payment.checkLicence(), isFalse);
+  test('checkLicence foi removido: o canal não tem mais o método', () {
+    expect(PaymentTypeCall.values.map((t) => t.method), isNot(contains('checkLicence')));
   });
 
   group('StoneTech', () {

@@ -33,14 +33,6 @@ void main() {
       expect(statuses.single, isA<StoneStatusTechMessage>().having((s) => s.message, 'message', 'Insira o cartão'));
     });
 
-    test('licença válida e inválida', () async {
-      await handler.onFinishedResponse(jsonEncode({'method': 'licence', 'result': 0, 'message': 'Licença ativada com sucesso'}));
-      await handler.onFinishedResponse(jsonEncode({'method': 'licence', 'result': 999999}));
-      await flush();
-      expect(statuses[0], isA<StoneStatusTechActivateRunning>());
-      expect(statuses[1], isA<StoneStatusTechActivateError>().having((s) => s.message, 'message', 'Erro ao validar a licença'));
-    });
-
     test('ativação: sucesso e erro com errorMessage do nativo', () async {
       await handler.onFinishedResponse(jsonEncode({'method': 'active', 'result': 0, 'message': 'Terminal ativado'}));
       await handler.onFinishedResponse(jsonEncode({'method': 'active', 'result': 999999, 'errorMessage': 'Ativação cancelada pelo usuário'}));
@@ -122,7 +114,7 @@ void main() {
       StoneTech.isPinpadActivated = false;
     });
 
-    final credentials = StoneTechCredentialsModel(stoneCode: '***REMOVIDO***', appName: 'Loja');
+    final credentials = StoneTechCredentialsModel(stoneCode: '123456789', appName: 'Loja');
 
     test('sem terminal ativado, startTransaction ativa o pinpad', () async {
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -132,7 +124,7 @@ void main() {
       final controller = StoneStreamController(handler: StoneStreamHandler());
       await controller.startTransaction(params: StoneTechPaymentParams(amount: 10.5, type: StoneTechPaymentType.debit, credentials: credentials));
       expect(calls.single.method, 'paymentActivePinpad');
-      expect(calls.single.arguments, {'appName': 'Loja', 'stoneCode': '***REMOVIDO***'});
+      expect(calls.single.arguments, {'appName': 'Loja', 'stoneCode': '123456789'});
       controller.dispose();
     });
 
@@ -169,16 +161,19 @@ void main() {
       controller.dispose();
     });
 
-    test('LICENCE_ERROR no pagamento é absorvido (o status vem pelo evento de licença)', () async {
+    test('erro do canal no pagamento é absorvido e vira mensagem no stream', () async {
       messenger.setMockMethodCallHandler(channel, (call) async {
-        throw PlatformException(code: 'LICENCE_ERROR', message: 'Licença vencida');
+        throw PlatformException(code: 'ERROR', message: 'SDK não ativado');
       });
       StoneTech.isPinpadActivated = true;
-      final controller = StoneStreamController(handler: StoneStreamHandler());
+      final handler = StoneStreamHandler();
+      final statuses = <StoneStatusTech>[];
+      final sub = handler.statusStream.listen(statuses.add);
+      final controller = StoneStreamController(handler: handler);
       await controller.startTransaction(params: StoneTechPaymentParams(amount: 1, type: StoneTechPaymentType.pix, credentials: credentials));
       await Future<void>.delayed(const Duration(milliseconds: 10));
-      controller.abortTransaction();
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(statuses.whereType<StoneStatusTechMessage>().map((s) => s.message), contains('SDK não ativado'));
+      await sub.cancel();
       controller.dispose();
     });
 

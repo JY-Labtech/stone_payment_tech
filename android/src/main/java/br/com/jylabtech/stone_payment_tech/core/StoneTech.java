@@ -1,17 +1,8 @@
 package br.com.jylabtech.stone_payment_tech.core;
 
-import br.com.jylabtech.stone_payment_tech.BuildConfig;
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import br.com.jylabtech.stone_payment_tech.licence.CheckLicenceTech;
-import br.com.jylabtech.stone_payment_tech.licence.LicenceResult;
 import br.com.jylabtech.stone_payment_tech.payments.PaymentsPresenter;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -26,63 +17,17 @@ public class StoneTech {
     private String TAG = "StoneTech";
     private boolean isDebugLogActive = false;
 
-    public static final String LICENCE_ERROR_CODE = StoneMethodHandler.LICENCE_ERROR_CODE;
-    private final ExecutorService licenceExecutor = Executors.newSingleThreadExecutor();
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    /** Uma única instância (e um único EncryptedSharedPreferences) por engine. */
-    private final CheckLicenceTech licenceTech;
     private final StoneMethodHandler handler;
 
     public StoneTech(Context context, MethodChannel channel) {
         this.currentContext = context;
         this.mChannel = channel;
-        this.licenceTech = new CheckLicenceTech(context);
-        this.handler = new StoneMethodHandler(
-                new StoneMethodHandler.LicenceSource() {
-                    @Override
-                    public boolean hasValidCachedLicence(String licenceKey, String licenceInternalKey) {
-                        return licenceTech.hasValidCachedLicence(licenceKey, licenceInternalKey);
-                    }
-
-                    @Override
-                    public LicenceResult validateLicence(String licenceKey, String licenceInternalKey) {
-                        return licenceTech.validateLicence(licenceKey, licenceInternalKey);
-                    }
-                },
-                new StoneMethodHandler.LicenceListener() {
-                    @Override
-                    public void onLicenceChecking() {
-                        presenter().notifyLicenceChecking();
-                    }
-
-                    @Override
-                    public void onLicenceResult(LicenceResult result) {
-                        if (result == null || !result.isSuccess()) {
-                            Log.i(TAG, "Licença inválida: método bloqueado");
-                        }
-                        presenter().notifyLicenceResult(result);
-                    }
-
-                    @Override
-                    public void onLicenceGranted(boolean granted) {
-                        presenter().setLicenceGranted(granted);
-                    }
-                },
-                actions,
-                licenceExecutor,
-                new Executor() {
-                    @Override
-                    public void execute(Runnable command) {
-                        mainHandler.post(command);
-                    }
-                },
-                BuildConfig.LICENCE_KEY,
-                BuildConfig.LICENCE_INTERNAL_KEY);
+        this.handler = new StoneMethodHandler(actions);
     }
 
     private PaymentsPresenter presenter() {
         if (this.payment == null) {
-            this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive, this.currentContext, licenceTech);
+            this.payment = new PaymentsPresenter(this.mChannel, isDebugLogActive, this.currentContext);
         }
         return this.payment;
     }
@@ -227,8 +172,6 @@ public class StoneTech {
     }
 
     public void dispose() {
-        licenceExecutor.shutdownNow();
-        mainHandler.removeCallbacksAndMessages(null);
         if (this.payment != null) {
             this.payment.dispose();
             this.payment = null;

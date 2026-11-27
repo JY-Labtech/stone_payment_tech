@@ -12,20 +12,13 @@ buildscript {
             localProps.load(new FileInputStream(rootProject.file(fileName)))
         }
 
-        // Licence Keys
-        licenceKey = System.env.LICENCE_KEY ?: localProps.getProperty("licenceKey") ?: ""
-        licenceInternalKey = System.env.LICENCE_INTERNAL_KEY ?: localProps.getProperty("licenceInternalKey") ?: ""
-
-        if (!licenceKey || licenceKey == "") {
-            throw new GradleException("LicenceKey não encontrado!!")
-        }
-
-        // licenceInternalKey é opcional: vazio ou fora do servidor oficial usa
-        // https://licence-server.invalid/pos-payments/licence/check (LicenceConfig).
-
-        // Tokens PackageCloud
-        packageCloudReadToken = System.env.PACKAGECLOUD_READ_TOKEN != null ? System.env.PACKAGECLOUD_READ_TOKEN : localProps["packageCloudReadToken"] ?: ""
-        packageCloudReadTokenInternal = System.env.PACKAGECLOUD_READ_TOKEN_INTERNAL ?: localProps["packageCloudReadTokenInternal"]
+        // Token de leitura do PackageCloud da Stone (SDK privado). Cada integrador usa
+        // o próprio token, fornecido pela Stone: variável de ambiente
+        // PACKAGECLOUD_READ_TOKEN ou `packageCloudReadToken` no local.properties
+        // do projeto Android do app (android/local.properties).
+        packageCloudReadToken = System.env.PACKAGECLOUD_READ_TOKEN ?: localProps.getProperty("packageCloudReadToken") ?: ""
+        // Opcional: repositório interno da Stone (pos-android-internal), só para quem tem acesso.
+        packageCloudReadTokenInternal = System.env.PACKAGECLOUD_READ_TOKEN_INTERNAL ?: localProps.getProperty("packageCloudReadTokenInternal") ?: ""
 
     }
 
@@ -44,20 +37,23 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
-        maven { url "https://packagecloud.io/priv/${packageCloudReadToken}/stone/pos-android/maven2" }
-        maven { url "https://packagecloud.io/priv/${packageCloudReadTokenInternal}/stone/pos-android-internal/maven2" }
+        if (packageCloudReadToken) {
+            maven { url "https://packagecloud.io/priv/${packageCloudReadToken}/stone/pos-android/maven2" }
+        }
+        if (packageCloudReadTokenInternal) {
+            maven { url "https://packagecloud.io/priv/${packageCloudReadTokenInternal}/stone/pos-android-internal/maven2" }
+        }
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
     }
 }
 
+if (!packageCloudReadToken) {
+    logger.warn("stone_payment_tech: packageCloudReadToken não configurado. Defina PACKAGECLOUD_READ_TOKEN " +
+            "ou packageCloudReadToken no android/local.properties do app para baixar o SDK da Stone.")
+}
+
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-
-apply from: './keys/positivo/positivo-signing-config.gradle'
-apply from: './keys/gertec/gertec-signing-config.gradle'
-apply from: './keys/ingenico/ingenico-signing-config.gradle'
-apply from: './keys/sunmi/sunmi-signing-config.gradle'
-apply from: './keys/tectoy/tectoy-signing-config.gradle'
 
 android {
     namespace = "br.com.jylabtech.stone_payment_tech"
@@ -93,77 +89,35 @@ android {
 
     defaultConfig {
         minSdk = 22
-        buildConfigField "String", "LICENCE_KEY", "\"${licenceKey}\""
-        buildConfigField "String", "LICENCE_INTERNAL_KEY", "\"${licenceInternalKey}\""
-    }
-
-    signingConfigs {
-        gertecGpos700 {
-            storeFile gertecSigningConfig.storeFile
-            keyAlias gertecSigningConfig.keyAlias
-            keyPassword gertecSigningConfig.keyPassword
-            storePassword gertecSigningConfig.storePassword
-        }
-        positivoStandard {
-            storeFile positivoSigningConfig.storeFile
-            keyAlias positivoSigningConfig.keyAlias
-            keyPassword positivoSigningConfig.keyPassword
-            storePassword positivoSigningConfig.storePassword
-        }
-        ingenicoStandard {
-            storeFile ingenicoSigningConfig.storeFile
-            keyAlias ingenicoSigningConfig.keyAlias
-            keyPassword ingenicoSigningConfig.keyPassword
-            storePassword ingenicoSigningConfig.storePassword
-        }
-        sunmiStandard {
-            storeFile sunmiSigningConfig.storeFile
-            keyAlias sunmiSigningConfig.keyAlias
-            keyPassword sunmiSigningConfig.keyPassword
-            storePassword sunmiSigningConfig.storePassword
-        }
-        tectoyStandard {
-            storeFile tectoySigningConfig.storeFile
-            keyAlias tectoySigningConfig.keyAlias
-            keyPassword tectoySigningConfig.keyPassword
-            storePassword tectoySigningConfig.storePassword
-        }
     }
 
     productFlavors {
         gertecGpos700 {
             dimension "model"
-            signingConfig signingConfigs.gertecGpos700
             versionNameSuffix "-gertecGpos700"
         }
         gertecGposSeries7 {
             dimension "model"
-            signingConfig signingConfigs.gertecGpos700
             versionNameSuffix "-gertecGposSeries7"
         }
         positivoSeriesL {
             dimension "model"
-            signingConfig signingConfigs.positivoStandard
             versionNameSuffix "-positivoSeriesL"
         }
         ingenico {
             dimension "model"
-            signingConfig signingConfigs.ingenicoStandard
             versionNameSuffix "-ingenico"
         }
         sunmi {
             dimension "model"
-            signingConfig signingConfigs.sunmiStandard
             versionNameSuffix "-sunmi"
         }
         sunmiSeriesP {
             dimension "model"
-            signingConfig signingConfigs.sunmiStandard
             versionNameSuffix "-sunmiSeriesP"
         }
         tectoySeriesT {
             dimension "model"
-            signingConfig signingConfigs.tectoyStandard
             versionNameSuffix "-tectoySeriesT"
         }
     }
@@ -198,11 +152,7 @@ dependencies {
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
-    // Dependencias para módulo de licença (sem kapt)
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("androidx.security:security-crypto:1.1.0-alpha03")
-
-    // Testes JVM da validação de licença (org.json do android.jar é stub)
+    // Testes JVM (org.json do android.jar é stub)
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.json:json:20240303"
 }

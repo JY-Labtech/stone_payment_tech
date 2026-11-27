@@ -85,29 +85,10 @@ class StoneStreamHandler extends IStoneHandler {
         final map = json.decode(message);
 
         switch (map['method']) {
-          case 'licence':
-            String errorMessage = (map['errorMessage'] ?? '').toString();
-            final messageFlow = map['message'] as String? ?? '';
-            lastStatus = StoneStatusTechActivateRunning(message: messageFlow);
-            final resultLicence = int.tryParse((map['result'] ?? '').toString()) ?? 999999;
-
-            if (resultLicence != 0 || errorMessage.toLowerCase().contains('erro')) {
-              if (errorMessage.isEmpty) {
-                errorMessage = 'Erro ao validar a licença';
-              }
-              lastStatus = StoneStatusTechActivateError(message: errorMessage);
-            }
-
-            _emit(lastStatus!);
-            return;
           case 'active':
             final message = (map['message'] ?? '').toString().toLowerCase();
             if (message.contains('terminal ativado')) {
               lastStatus = const StoneStatusTechActivate();
-            } else if (message.contains('licença ativada')) {
-              // Ignorar mensagem de licença ativada durante o fluxo de ativação do terminal
-              // Esta mensagem vem do checkValidLicence e não deve interferir no fluxo
-              return;
             } else {
               // Nos erros o nativo envia errorMessage (message vem nula).
               final error = (map['errorMessage'] ?? map['message'] ?? '').toString();

@@ -1,7 +1,7 @@
 package br.com.jylabtech.stone_payment_tech.core;
 
 /**
- * Despacha um método do canal (já liberado pelo gate de licença) para o SDK
+ * Despacha um método do canal para o SDK
  * Stone e responde a chamada exatamente uma vez:
  * - getters respondem o valor (String);
  * - as demais operações respondem {@code true} assim que são disparadas no SDK
@@ -41,9 +41,6 @@ public class MethodDispatcher {
             return NOT_IMPLEMENTED;
         }
         switch (paymentMethod) {
-            case CHECK_LICENCE:
-                // O gate de licença já passou.
-                return true;
             case PAYMENT_ACTIVE_DEBUG_LOG:
                 boolean isDebugLog = args.argument("isDebugLog");
                 actions.activeDebugLog(isDebugLog);

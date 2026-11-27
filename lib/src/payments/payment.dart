@@ -24,13 +24,13 @@ final class StonePayment {
     required this.paymentHandler,
   });
 
-  /// Método factory assíncrono para criação controlada e validação da licença
+  /// Cria (uma única vez) a instância e registra o handler de eventos do nativo.
   static StonePayment create({
     required MethodChannel channel,
     required IStoneHandler paymentHandler,
     IStoneTechHandler? iStoneTechHandler,
   }) {
-    // Se já existe instância e licença validada, retorna ela diretamente
+    // Se já existe instância, retorna ela diretamente
     if (_instance != null) {
       return _instance!;
     }
@@ -41,7 +41,7 @@ final class StonePayment {
       paymentHandler: paymentHandler,
     ).._stoneTechHandler = iStoneTechHandler;
 
-    // Salva instância e estado da licença validada
+    // Salva a instância
     _instance = payment;
 
     payment.channel.setMethodCallHandler((e) => IStoneHelper.callHandler(
@@ -80,14 +80,6 @@ final class StonePayment {
         onTransaction: (model) => _checkPinpadActivated(model),
       ),
     );
-  }
-
-  /// Valida a licença no nativo (cache local ou servidor oficial) sem chamar o SDK.
-  ///
-  /// Retorna `true` com licença válida; lança `PlatformException(code: 'LICENCE_ERROR')`
-  /// com licença inválida.
-  Future<bool> checkLicence() async {
-    return await channel.invokeMethod<bool>('checkLicence') ?? false;
   }
 
   /// Function to reversal transaction

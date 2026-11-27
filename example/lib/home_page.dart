@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:stone_payment_tech/stone_payment_tech.dart';
+import 'package:stone_payment_tech_example/config.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -22,7 +23,7 @@ class _HomePageState extends State<HomePage> {
 
   void printerBase64() {
     StoneCustomPrinterController().initializeAndPrintBase64(
-      stoneCredentials: StoneTechCredentialsModel(stoneCode: '***REMOVIDO***', appName: 'Stone Payment Tech'),
+      stoneCredentials: ExampleConfig.credentials,
       onMessage: (message) {
         log('onMessage: $message');
       },
@@ -44,6 +45,7 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (!ExampleConfig.hasStoneCode) const _MissingStoneCodeBanner(),
             // Card de Seleção de Tipo de Pagamento
             Card(
               child: Padding(
@@ -149,7 +151,7 @@ class _HomePageState extends State<HomePage> {
                               stonePaymentParams: StoneTechPaymentParams(
                                 amount: 1.50,
                                 type: selectedPaymentType ?? StoneTechPaymentType.debit,
-                                credentials: StoneTechCredentialsModel(stoneCode: '***REMOVIDO***', appName: 'Stone Payment Tech'),
+                                credentials: ExampleConfig.credentials,
                               ),
                             ),
                           ),
@@ -176,7 +178,7 @@ class _HomePageState extends State<HomePage> {
                               stonePaymentParams: StoneTechPaymentParams(
                                 amount: 15.90,
                                 type: selectedPaymentType ?? StoneTechPaymentType.debit,
-                                credentials: StoneTechCredentialsModel(stoneCode: '***REMOVIDO***', qrCodeAuthorization: '', qrCodeProviderid: '', appName: 'Stone Payment Tech'),
+                                credentials: ExampleConfig.credentials,
                               ),
                               onConfirmPayment: (transaction) {
                                 log('***Response dialog: $transaction');
@@ -241,6 +243,35 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16), alignment: Alignment.centerLeft),
+      ),
+    );
+  }
+}
+
+/// Aviso exibido quando o app foi iniciado sem `--dart-define=STONE_CODE`.
+class _MissingStoneCodeBanner extends StatelessWidget {
+  const _MissingStoneCodeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.warning_amber, color: theme.colorScheme.onErrorContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'STONE_CODE não configurado. Rode com --dart-define=STONE_CODE=<seu stone code> '
+                '(veja o README do example).',
+                style: TextStyle(color: theme.colorScheme.onErrorContainer),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

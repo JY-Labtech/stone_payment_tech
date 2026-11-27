@@ -39,3 +39,11 @@ example/Chaves/
 **/.DS_Store
 # Análise técnica interna (não publicar)
 doc/
+# Chaves/keystores e dumps de memória
+*.jks
+*.keystore
+*.hprof
+build/
+**/build/
+# Templates de assinatura dos fabricantes (não usados pelo build do plugin desde a 4.0.0)
+android/keys/

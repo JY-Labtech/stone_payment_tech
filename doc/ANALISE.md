@@ -1,4 +1,6 @@
-# Análise técnica: stone_payment_tech 3.1.0
+# Análise técnica: stone_payment_tech 4.0.0
+
+> 4.0.0: licença, cobrança e gate por operação removidos (projeto open source, MIT). Todas as operações chamam o SDK da Stone direto; não há chamada HTTP à JY Labtech. Esta análise foi feita na 3.1.0 e atualizada para a 4.0.0.
 
 Documento interno (excluído do pacote pelo `.pubignore`). Cobre a superfície Dart, o MethodChannel `stone_payment_tech`, o nativo Java (`android/src/main`), os bugs encontrados, as otimizações e o que ainda depende de hardware.
 
@@ -9,12 +11,7 @@ Dart StonePayment.xxx()  ──invokeMethod──▶  StoneTechFlutterPlugin.onM
                                                └─ StoneTech.initPayment (glue Android)
                                                     └─ StoneMethodHandler.handle   (puro, testado na JVM)
                                                          1. método desconhecido → notImplemented
-                                                         2. gate de licença: atalho sem rede só se nenhuma consulta
-                                                            é devida (validada online neste processo há < 4h ou
-                                                            servidor fora do ar há < 5 min); senão
-                                                            CheckLicenceTech.validateLicence em background
-                                                         3. inválida → error("LICENCE_ERROR"), SDK não é chamado
-                                                         4. válida → MethodDispatcher.dispatch (main thread)
+                                                         2. conhecido → MethodDispatcher.dispatch (main thread)
                                                               └─ StoneActions (fachada) → PaymentsPresenter → PaymentsUseCase / StonePrinter → SDK Stone
 Resultado assíncrono: SDK callback → PaymentsFragment.onXxx → channel.invokeMethod("onXxx", json)
                       → IStoneHelper.callHandler → IStoneHandler (+ IStoneTechHandler) → StoneStreamHandler (stream)
@@ -26,39 +23,37 @@ Resultado assíncrono: SDK callback → PaymentsFragment.onXxx → channel.invok
 
 ## 2. Tabela por método (Dart → canal → nativo)
 
-Legenda da resposta: **op** = `true` ao disparar; o resultado chega por eventos (`onFinishedResponse` etc.). Erros: `LICENCE_ERROR` (licença), `ERROR` (exceção ao disparar), `notImplemented` (método desconhecido). "Dart: false" = o método Dart captura a exceção e devolve `false`; "Dart: lança" = propaga `PlatformException`.
+Legenda da resposta: **op** = `true` ao disparar; o resultado chega por eventos (`onFinishedResponse` etc.). Erros: `ERROR` (exceção ao disparar), `notImplemented` (método desconhecido). "Dart: false" = o método Dart captura a exceção e devolve `false`; "Dart: lança" = propaga `PlatformException`.
 
-| Método Dart | Método do canal | Handler nativo (StoneActions → caso de uso → SDK) | Gate de licença? | Resposta sucesso / erro | Testado? (Dart / JVM) | Problemas encontrados (status) |
-|---|---|---|---|---|---|---|
-| `checkLicence()` (novo) | `checkLicence` | só o gate (não chama SDK) | sim | `true` / LICENCE_ERROR, Dart: lança | sim / sim | Era inalcançável: o plugin só repassava métodos `payment*` e respondia notImplemented (corrigido) |
-| `reversal()` | `paymentReversal` | `reversal` → `onReversalTransaction` → `ReversalProvider` | sim | op / Dart: false | sim / sim | — |
-| `activePinpad(appName, stoneCode)` | `paymentActivePinpad` | `activate` → `initializeAndActivatePinpad` → `StoneStart.init` + `ActiveApplicationProvider.activate` (timeout 60 s) | sim | op / Dart: false | sim / sim | — |
-| `activePinpadWithCredentials(...)` | `paymentActivePinpadCredentials` | `activateWithCredentials` → `qrCodeKeys` ("Bearer " + token) → `StoneStart.init(keys)` | sim | op / Dart: false | sim / sim | Envia `printCustomerSlip`, que o nativo ignora (inofensivo, mantido por compatibilidade) |
-| `creditPayment(int centavos, ...)` | `paymentCredit` | `doTransaction(type=1)` → `initTransaction` → `PosTransactionProvider` | sim | op / Dart: lança | sim / sim | — |
-| `creditPaymentParc(value, installment, withInterest, ...)` | `paymentCreditParc` | `doTransaction(type=1)` com `InstalmentTransactionEnum` (2–13, com/sem juros) | sim | op / Dart: lança | sim / sim | Parcelas fora de 1–13 viram à vista (comportamento do helper, documentado em teste) |
-| `debitPayment(int, ...)` | `paymentDebit` | `doTransaction(type=2)` | sim | op / Dart: lança | sim / sim | — |
-| `voucherPayment(int, ...)` | `paymentVoucher` | `doTransaction(type=4)` | sim | op / Dart: lança | sim / sim | — |
-| `pixPayment(amount, qrCodeAuthroization, qrCodeProviderid, ...)` | `paymentPix` | `doTransaction(type=3, keys QRCode)` | sim | op / Dart: lança | sim / sim | Typo `qrCodeAuthroization` na API pública (mantido; mudar seria quebrante) |
-| `activeDebugLog(isDebugLog)` | `paymentActiveDebugLog` | `activeDebugLog` → `setDebugLog` | sim | op (Future<void>) / Dart: lança | sim / sim | Recriava o presenter e perdia a transação em andamento sem liberar o anterior (corrigido) |
-| `getPosSerialNumber()` | `paymentGetSerialNumber` | `Stone.getPosAndroidDevice().getPosAndroidSerialNumber()` (fallback `Build.getSerial`) | sim | String / Dart: lança | sim / sim | — |
-| `getPosManufacture()` | `paymentGetManufacture` | `Stone.getPosAndroidDevice().getPosAndroidManufacturer()` | sim | String ou null / Dart: lança | sim / sim | Devolvia `null` após a ativação (flag `isInitialized` só era ligada no débito sem chaves) (corrigido) |
-| `abortTransaction()` | `paymentAbort` | `abortCurrentPosTransaction` → `abortPayment` | sim | op / Dart: lança | sim / sim | — |
-| `abortPIXTransaction()` | `paymentAbortPix` | `abortPIXTransaction` → `cancelTransactionPIX` (`CancellationProvider`) + `abortPayment` | sim | op / Dart: lança | sim / sim | `CancellationProvider(null)` sem transação corrente (agora erro explícito "Nenhuma transação PIX em andamento") |
-| `abortActivation()` | `paymentAbortActivation` | `abortActivation` (limpa estado e timeout; o SDK não tem abort de ativação) | sim | op / Dart: lança | sim / sim | — |
-| `printerCurrentTransaction(printCustomerSlip)` | `paymentPrinterTransaction` | `printerCurrentTransaction` → `PosPrintReceiptProvider(CLIENT)` | sim | op / Dart: lança | sim / sim | `printCustomerSlip` era ignorado: imprimia mesmo com `false` (corrigido) |
-| `paymentPrinterTransactionKey(transactionKey)` | `paymentPrinterTransactionKey` | busca por initiatorTransactionKey no `TransactionDAO` → impressão CLIENT | sim | op / Dart: lança | sim / sim | Chave enviada (`transactionKey`) ≠ lida (corrigido na etapa anterior; aceita os dois nomes) |
-| `cancelTransaction(idFromBase)` | `paymentCancelTransaction` | `cancelTransaction` → `TransactionDAO.findTransactionWithId` → `CancellationProvider` | sim | op / Dart: lança | sim / sim | NPE no `onError` (usava `currentTransactionObject`, nulo no cancelamento por id) (corrigido) |
-| `getAllTransactions()` | `paymentGetAllTransactions` | `getAllTransactions` → `getAllTransactionsOrderByIdDesc` → `ActionResult.buildAllTransactions` | sim | op / Dart: lança | sim / sim | Lista nula → NPE em toda chamada (e o catch repetia o NPE); mesmo objeto em todos os itens (corrigido) |
-| `setPaymentOption(option)` | `paymentOptions` | `setPaymentOption` → `setTransactionTypeSelected(index)` | sim | op / Dart: lança | sim / sim | NPE sem lista de opções; índice -1 enviado ao SDK se a opção não existir (corrigido) |
-| `getTransactionByInitiatorTransactionKey(key)` | `paymentGetTransactionByInitiatorTransactionKey` | `TransactionDAO.findTransactionWithInitiatorTransactionKey` → `onFinishedResponse` | sim | op / Dart: lança | sim / sim | NPE com `userModel` nulo (terminal não ativado nesta sessão) e resposta montada duas vezes (corrigido) |
-| `customPrinter(StonePrinterParams)` | `paymentCustomPrinter` | `PrinterParams.parse` → `PosPrintProvider.addLine/addBase64Image` | sim | op / Dart: false | sim / sim | Dart envia `type: "image"`, nativo só imprimia `"base64"` (imagens nunca saíam) (corrigido) |
-| `printFromBase64(base64)` | `paymentPrintBase64` | `PosPrintProvider.addBase64Image` | sim | op / Dart: false | sim / sim | — |
-| `printWrapPaper(lines)` | `paymentPrintWrapPaper` | `PosPrintProvider.addLine("\n")` × lines | sim | op / Dart: false | sim / sim | — |
-| `setHandler(handler)` | — | — | — | — | sim / — | Descartava o `IStoneTechHandler` informado no `create` (corrigido) |
-| `StoneTech.I`, `initPayment`, `payment` | — | — | — | — | sim / — | `StonePayment` é singleton estático: o primeiro `channel`/handler vence (por projeto; use `setHandler`) |
+| Método Dart | Método do canal | Handler nativo (StoneActions → caso de uso → SDK) | Resposta sucesso / erro | Testado? (Dart / JVM) | Problemas encontrados (status) |
+|---|---|---|---|---|---|
+| `reversal()` | `paymentReversal` | `reversal` → `onReversalTransaction` → `ReversalProvider` | op / Dart: false | sim / sim | — |
+| `activePinpad(appName, stoneCode)` | `paymentActivePinpad` | `activate` → `initializeAndActivatePinpad` → `StoneStart.init` + `ActiveApplicationProvider.activate` (timeout 60 s) | op / Dart: false | sim / sim | — |
+| `activePinpadWithCredentials(...)` | `paymentActivePinpadCredentials` | `activateWithCredentials` → `qrCodeKeys` ("Bearer " + token) → `StoneStart.init(keys)` | op / Dart: false | sim / sim | Envia `printCustomerSlip`, que o nativo ignora (inofensivo, mantido por compatibilidade) |
+| `creditPayment(int centavos, ...)` | `paymentCredit` | `doTransaction(type=1)` → `initTransaction` → `PosTransactionProvider` | op / Dart: lança | sim / sim | — |
+| `creditPaymentParc(value, installment, withInterest, ...)` | `paymentCreditParc` | `doTransaction(type=1)` com `InstalmentTransactionEnum` (2–13, com/sem juros) | op / Dart: lança | sim / sim | Parcelas fora de 1–13 viram à vista (comportamento do helper, documentado em teste) |
+| `debitPayment(int, ...)` | `paymentDebit` | `doTransaction(type=2)` | op / Dart: lança | sim / sim | — |
+| `voucherPayment(int, ...)` | `paymentVoucher` | `doTransaction(type=4)` | op / Dart: lança | sim / sim | — |
+| `pixPayment(amount, qrCodeAuthroization, qrCodeProviderid, ...)` | `paymentPix` | `doTransaction(type=3, keys QRCode)` | op / Dart: lança | sim / sim | Typo `qrCodeAuthroization` na API pública (mantido; mudar seria quebrante) |
+| `activeDebugLog(isDebugLog)` | `paymentActiveDebugLog` | `activeDebugLog` → `setDebugLog` | op (Future<void>) / Dart: lança | sim / sim | Recriava o presenter e perdia a transação em andamento sem liberar o anterior (corrigido) |
+| `getPosSerialNumber()` | `paymentGetSerialNumber` | `Stone.getPosAndroidDevice().getPosAndroidSerialNumber()` (fallback `Build.getSerial`) | String / Dart: lança | sim / sim | — |
+| `getPosManufacture()` | `paymentGetManufacture` | `Stone.getPosAndroidDevice().getPosAndroidManufacturer()` | String ou null / Dart: lança | sim / sim | Devolvia `null` após a ativação (flag `isInitialized` só era ligada no débito sem chaves) (corrigido) |
+| `abortTransaction()` | `paymentAbort` | `abortCurrentPosTransaction` → `abortPayment` | op / Dart: lança | sim / sim | — |
+| `abortPIXTransaction()` | `paymentAbortPix` | `abortPIXTransaction` → `cancelTransactionPIX` (`CancellationProvider`) + `abortPayment` | op / Dart: lança | sim / sim | `CancellationProvider(null)` sem transação corrente (agora erro explícito "Nenhuma transação PIX em andamento") |
+| `abortActivation()` | `paymentAbortActivation` | `abortActivation` (limpa estado e timeout; o SDK não tem abort de ativação) | op / Dart: lança | sim / sim | — |
+| `printerCurrentTransaction(printCustomerSlip)` | `paymentPrinterTransaction` | `printerCurrentTransaction` → `PosPrintReceiptProvider(CLIENT)` | op / Dart: lança | sim / sim | `printCustomerSlip` era ignorado: imprimia mesmo com `false` (corrigido) |
+| `paymentPrinterTransactionKey(transactionKey)` | `paymentPrinterTransactionKey` | busca por initiatorTransactionKey no `TransactionDAO` → impressão CLIENT | op / Dart: lança | sim / sim | Chave enviada (`transactionKey`) ≠ lida (corrigido na etapa anterior; aceita os dois nomes) |
+| `cancelTransaction(idFromBase)` | `paymentCancelTransaction` | `cancelTransaction` → `TransactionDAO.findTransactionWithId` → `CancellationProvider` | op / Dart: lança | sim / sim | NPE no `onError` (usava `currentTransactionObject`, nulo no cancelamento por id) (corrigido) |
+| `getAllTransactions()` | `paymentGetAllTransactions` | `getAllTransactions` → `getAllTransactionsOrderByIdDesc` → `ActionResult.buildAllTransactions` | op / Dart: lança | sim / sim | Lista nula → NPE em toda chamada (e o catch repetia o NPE); mesmo objeto em todos os itens (corrigido) |
+| `setPaymentOption(option)` | `paymentOptions` | `setPaymentOption` → `setTransactionTypeSelected(index)` | op / Dart: lança | sim / sim | NPE sem lista de opções; índice -1 enviado ao SDK se a opção não existir (corrigido) |
+| `getTransactionByInitiatorTransactionKey(key)` | `paymentGetTransactionByInitiatorTransactionKey` | `TransactionDAO.findTransactionWithInitiatorTransactionKey` → `onFinishedResponse` | op / Dart: lança | sim / sim | NPE com `userModel` nulo (terminal não ativado nesta sessão) e resposta montada duas vezes (corrigido) |
+| `customPrinter(StonePrinterParams)` | `paymentCustomPrinter` | `PrinterParams.parse` → `PosPrintProvider.addLine/addBase64Image` | op / Dart: false | sim / sim | Dart envia `type: "image"`, nativo só imprimia `"base64"` (imagens nunca saíam) (corrigido) |
+| `printFromBase64(base64)` | `paymentPrintBase64` | `PosPrintProvider.addBase64Image` | op / Dart: false | sim / sim | — |
+| `printWrapPaper(lines)` | `paymentPrintWrapPaper` | `PosPrintProvider.addLine("\n")` × lines | op / Dart: false | sim / sim | — |
+| `setHandler(handler)` | — | — | — | sim / — | Descartava o `IStoneTechHandler` informado no `create` (corrigido) |
+| `StoneTech.I`, `initPayment`, `payment` | — | — | — | sim / — | `StonePayment` é singleton estático: o primeiro `channel`/handler vence (por projeto; use `setHandler`) |
 | — (enum sem método) | `paymentLastTransaction`, `paymentRefund`, `paymentIsAuthenticated` | não existem no nativo | — | notImplemented | — / sim | Valores mortos de `PaymentTypeCall`; mantidos (remover seria quebrante) |
 
-**Gate de licença:** todos os 24 métodos conhecidos passam por `StoneMethodHandler` antes do SDK. Teste JVM `invalidLicenceRepliesLicenceErrorForEveryMethodAndNeverCallsSdk` percorre `PaymentMethod.values()` e confirma `LICENCE_ERROR` sem nenhuma chamada à fachada.
 
 ### Eventos nativo → Dart
 
@@ -68,7 +63,7 @@ Legenda da resposta: **op** = `true` ao disparar; o resultado chega por eventos 
 | `onError` | JSON `BasicResult` ou texto | `onError(String)` | `onError(StoneTechResponse)` | status por `method` | `IStoneTechHandler` nunca recebia (tipo lido do conteúdo); `null` gerava TypeError (corrigidos) |
 | `onMessage` | texto | `onMessage(String)` | `onMessage(String)` | `StoneStatusTechMessage` | `null` (ex.: `getMessageFromAuthorize()`) gerava TypeError (corrigido) |
 | `onChanged` | JSON (`QRCode`, `PaymentOptions`) | `onChanged(String)` | `onChanged(StoneTechResponse)` | ignorado (usa `onAuthProgress`) | Não estava no mapa `String.handler`: lançava "Not Implemented" (corrigido) |
-| `onFinishedResponse` | JSON `ActionResult`/`BasicResult` | `onFinishedResponse(String)` + `_checkPinpadActivated` | `onFinishedResponse(StoneTransactionModel)` | `licence`/`active`/`transaction`/`cancel`/`printerTransaction`/`PaymentOptions` | NPE em `active` sem `message`; erro de ativação mostrava texto genérico em vez de `errorMessage` (corrigidos) |
+| `onFinishedResponse` | JSON `ActionResult`/`BasicResult` | `onFinishedResponse(String)` + `_checkPinpadActivated` | `onFinishedResponse(StoneTransactionModel)` | `active`/`transaction`/`cancel`/`printerTransaction`/`PaymentOptions` | NPE em `active` sem `message`; erro de ativação mostrava texto genérico em vez de `errorMessage` (corrigidos) |
 | `onAuthProgress` | JSON ou texto | `onAuthProgress(String)` | `onAuthProgress(StoneTechResponse)` | idem `onFinishedResponse` | — |
 | `onLoading` | bool | `onLoading(bool)` | `onLoading(bool)` | ignorado | Não é emitido pelo nativo atual |
 | `onAbortedSuccessfully`, `writeToFile`, `onTransactionInfo` | — | — | métodos próprios | — | Não emitidos pelo nativo atual (contrato herdado) |
@@ -76,14 +71,14 @@ Legenda da resposta: **op** = `true` ao disparar; o resultado chega por eventos 
 ## 3. Bugs encontrados e corrigidos (esta etapa)
 
 Nativo:
-1. `checkLicence` inalcançável (filtro `startsWith("payment")` no plugin).
+1. (removido na 4.0.0: dizia respeito à licença)
 2. `getAllTransactions` sempre falhava (NPE na lista nula de `ActionResult`, repetida no `catch`) e reaproveitava o mesmo `StoneTransaction`.
 3. `printerCurrentTransaction` ignorava `printCustomerSlip` (o "Não" do diálogo de via do cliente imprimia mesmo assim).
 4. `customPrinter` não imprimia imagens (`image` × `base64`).
 5. NPEs: `setPaymentOption` (lista nula / índice -1), `getTransactionByInitiatorTransactionKey` (`userModel` nulo), `onError` do cancelamento por id, `CancellationProvider(null)` no abort PIX, `buildResponseStoneTransaction(null)` quando a transação aprovada não está no banco local, `getListOfErrors()` nulo na impressora, `Bitmap` nulo no QRCode, `Action`/`ErrorsEnum` nulos.
 6. `getPosManufacture` devolvia `null` após ativação.
 7. `activeDebugLog` recriava o presenter (perdia `posTransactionProvider`/`userModel`, abort deixava de funcionar, timeout do anterior ficava pendurado).
-8. 2ª barreira de licença no caso de uso relia só o cache: com servidor OK e cache não salvo (regra da etapa anterior), a operação falhava com "Licença inválida ou não foi inicializada!".
+8. (removido na 4.0.0: dizia respeito à licença)
 9. `null` enviado ao Dart em `onMessage`/`onError`/… (`PaymentsFragment.nonNull`).
 10. `onDetachedFromEngine` sem proteção contra nulos; chamadas após o detach agora respondem `ERROR` em vez de NPE.
 
@@ -107,37 +102,32 @@ Exemplo:
 
 | Otimização | Por quê |
 |---|---|
-| Gate de licença extraído para `StoneMethodHandler` (puro; executores injetados) | Permite testar na JVM "licença inválida → `LICENCE_ERROR` sem chamar o SDK" para todos os métodos; `StoneTech` vira só cola Android |
-| Um único `CheckLicenceTech` por engine, compartilhado com presenter/caso de uso | Antes havia 3 instâncias (StoneTech não tinha, presenter e caso de uso criavam a sua, e mais uma a cada `activeDebugLog`) |
-| `EncryptedLicenceStorage` guarda o `SharedPreferences` criado | `MasterKey` + `EncryptedSharedPreferences.create` (Keystore + Tink) eram refeitos a cada `load/save/delete`, na main thread |
-| 2ª barreira de licença liberada pelo gate durante o despacho (`setLicenceGranted`) | Evita reler/decifrar o cache a cada operação logo após o gate e corrige o bug 8; fora do despacho continua exigindo cache válido |
 | `activeDebugLog` só troca a flag | Não recria presenter/caso de uso/printer/fragment |
-| `licenceExecutor.shutdownNow()` + `mainHandler.removeCallbacksAndMessages(null)` no detach | Libera thread e callbacks pendentes da engine desanexada |
+| `payment.dispose()` no detach | Libera o presenter/caso de uso da engine desanexada |
 | `PrinterParams` (parser puro com Gson estático) | Remove `new Gson()` por impressão e permite testar o formato do Dart |
 | `PaymentsPresenter.qrCodeKeys` | Remove duas cópias do mesmo `HashMap` com inicializador anônimo (classe interna por chamada) |
-| `StoneMethodHandler.licenceErrorMessage` | Mensagem de erro de licença num lugar só |
-| Código morto removido | `checkValidLicence` (bloqueante, sem uso), `PaymentsPresenter.hasValidCachedLicence/validateLicence`, campos `licenceTech/gson/hasAborted/countPassword/isDebugLog` do presenter, imports duplicados |
+| Código morto removido | imports duplicados e campos sem uso do presenter (`gson/hasAborted/countPassword/isDebugLog`) |
 
-Nada mudou em nomes de prefs, formato do cache ou regras de licença (`LicenceRules`/`LicenceConfig` intocados; os 53 testes de licença seguem passando).
 
-**Atualização (JYN-234, contrato do jylabtech_core):** as regras de licença mudaram depois desta análise. O cache offline vale no máximo 72h (antes 7 dias) e só é usado quando o servidor não responde (rede, timeout, 408/429/5xx, corpo ilegível); a primeira validação de cada processo sempre consulta o servidor e, em uso, revalida a cada 4h; recusa definitiva (4xx exceto 408/429, ou 200 com licença inutilizável, inclusive `reason: customer_blocked`) apaga o cache e bloqueia na hora; após falha de rede espera 5 min antes de tentar de novo. `hasValidCachedLicence` (atalho do gate e da 2ª barreira) só devolve true quando `validateLicence` também liberaria sem rede. Nomes de prefs e formato do cache não mudaram.
 
 ## 5. Testes
 
-| Suite | Antes | Depois |
-|---|---|---|
-| JVM (`testSunmiDebugUnitTest`) | 62 | 101 |
-| Dart (`flutter test`) | 8 | 160 |
+| Suite | Antes (3.0) | 3.1.0 | 4.0.0 (sem licença) |
+|---|---|---|---|
+| JVM (`testSunmiDebugUnitTest`) | 62 | 101 | 45 |
+| Dart (`flutter test`) | 8 | 160 | 125 |
 
-JVM: `StoneMethodHandlerTest` (gate, threads, resposta única, `LICENCE_ERROR` para os 24 métodos, `notImplemented`), `MethodDispatcherTest` (argumentos exatos de cada método → fachada, tipos de pagamento, argumentos obrigatórios), `StoneHelperTest` (tipos, parcelas 1–13, mensagens, erros do SDK, opções, chaves QRCode), `PrinterParamsTest`, `ResultJsonTest` (JSON enviado ao Dart, `buildAllTransactions`), licença (`LicenceRules`/`LicenceConfig`/`CheckLicenceTech`).
+Na 4.0.0 saíram os testes de licença (JVM: `LicenceRules`/`LicenceConfig`/`CheckLicenceTech`/`LicenceHttpResult`; Dart: `licence_test.dart` e os casos `LICENCE_ERROR`/`checkLicence`); os testes de cada método foram mantidos.
 
-Dart: `payment_methods_test.dart` (cada método público: (a) método + argumentos exatos, inclusive centavos e defaults; (b) retorno de sucesso; (c) `ERROR` e `LICENCE_ERROR` sem sucesso indevido), `handler_events_test.dart` (eventos nativo → `IStoneHandler`/`IStoneTechHandler`, `setHandler`, ativação), `models_test.dart` (parsers com payload realista, campos nulos, enums/extensões), `stream_test.dart` (`StoneStreamHandler`, `StoneTechPrinterHandler`, `StoneStreamController`), além de `licence_test.dart` e `method_result_test.dart`.
+JVM: `StoneMethodHandlerTest` (despacho direto ao SDK para os 23 métodos, resposta única, erro do SDK, `notImplemented`, inclusive `checkLicence` removido), `MethodDispatcherTest` (argumentos exatos de cada método → fachada, tipos de pagamento, argumentos obrigatórios), `StoneHelperTest` (tipos, parcelas 1–13, mensagens, erros do SDK, opções, chaves QRCode), `PrinterParamsTest`, `ResultJsonTest` (JSON enviado ao Dart, `buildAllTransactions`).
+
+Dart: `payment_methods_test.dart` (cada método público: (a) método + argumentos exatos, inclusive centavos e defaults; (b) retorno de sucesso; (c) `ERROR` sem sucesso indevido), `handler_events_test.dart` (eventos nativo → `IStoneHandler`/`IStoneTechHandler`, `setHandler`, ativação), `models_test.dart` (parsers com payload realista, campos nulos, enums/extensões), `stream_test.dart` (`StoneStreamHandler`, `StoneTechPrinterHandler`, `StoneStreamController`) e `method_result_test.dart`.
 
 ## 6. Pendências (decisão do dono / hardware)
 
 - **Fluxos do SDK com hardware**: `PosTransactionProvider`, `ActiveApplicationProvider`, `CancellationProvider`, `ReversalProvider` e impressão só rodam num POS Stone. Os testes cobrem até a fachada `StoneActions` e as partes puras; o comportamento dos callbacks do SDK precisa de teste manual por fabricante (incluindo o GPOS Series 7, agora com APK gerado).
 - **`initiatorTransactionKey` vazio**: quando o app não envia chave, a busca no `TransactionDAO` após a aprovação depende de o SDK preencher a chave; agora há fallback para a própria transação, mas vale confirmar no aparelho que os dados do recibo vêm completos.
-- **Erros que viram `false`**: `activePinpad*`, `reversal`, `customPrinter`, `printFromBase64`, `printWrapPaper` engolem a `PlatformException` (inclusive `LICENCE_ERROR`) e devolvem `false`; os demais propagam. Mudar isso é quebrante; sugerimos padronizar numa próxima major.
+- **Erros que viram `false`**: `activePinpad*`, `reversal`, `customPrinter`, `printFromBase64`, `printWrapPaper` engolem a `PlatformException` e devolvem `false`; os demais propagam. Mudar isso é quebrante; sugerimos padronizar numa próxima major.
 - **API com typos/legado**: `qrCodeAuthroization`, `PaymentTypecredit`, valores mortos em `PaymentTypeCall` (`lastTransaction`, `refund`, `pinpadAuthenticated`). Podem ser `@Deprecated` numa próxima versão.
 - **`StonePayment` singleton estático**: o primeiro `channel`/handler vence; `IStoneHandler` é trocado via `setHandler`. Comportamento mantido.
 - **Ativação**: o SDK não oferece abort real de `ActiveApplicationProvider`; `abortActivation` só limpa o estado e avisa o Dart (o diálogo do SDK pode continuar até terminar).

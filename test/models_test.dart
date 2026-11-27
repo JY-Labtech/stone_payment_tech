@@ -115,7 +115,7 @@ void main() {
 
   group('StoneTechCredentialsModel', () {
     test('toMap/fromMap/fromJson', () {
-      final credentials = StoneTechCredentialsModel(stoneCode: '***REMOVIDO***', appName: 'Loja', qrCodeAuthorization: 'tok', qrCodeProviderid: 'prov');
+      final credentials = StoneTechCredentialsModel(stoneCode: '123456789', appName: 'Loja', qrCodeAuthorization: 'tok', qrCodeProviderid: 'prov');
       final copy = StoneTechCredentialsModel.fromJson(credentials.toJson());
       expect(copy, credentials);
       expect(copy.appName, 'Loja');

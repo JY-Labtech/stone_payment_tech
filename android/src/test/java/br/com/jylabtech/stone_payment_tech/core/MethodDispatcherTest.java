@@ -157,9 +157,6 @@ public class MethodDispatcherTest {
     public void sdkExceptionRepliesErrorOnce() {
         actions.failWith = new IllegalStateException("SDK não ativado");
         for (PaymentMethod method : PaymentMethod.values()) {
-            if (method == PaymentMethod.CHECK_LICENCE) {
-                continue;
-            }
             FakeReply reply = dispatch(method, fullArgs());
             assertEquals(method.getMethod(), List.of("error"), reply.calls);
             assertEquals(MethodDispatcher.ERROR_CODE, reply.errorCode);
@@ -221,11 +218,11 @@ public class MethodDispatcherTest {
                 new MapArgs().put("InitiatorTransactionKey", "ITK-1"), "getByInitiator", "ITK-1");
         assertAction(PaymentMethod.PAYMENT_PRINTER_TRANSACTION, new MapArgs().put("printCustomerSlip", false), "printerCurrent", false);
         assertAction(PaymentMethod.PAYMENT_PRINTER_TRANSACTION_KEY, new MapArgs().put("transactionKey", "TK"), "printerKey", "TK");
-        assertAction(PaymentMethod.ACTIVE_PINPAD, new MapArgs().put("appName", "Loja").put("stoneCode", "***REMOVIDO***"),
-                "activate", "Loja", "***REMOVIDO***");
+        assertAction(PaymentMethod.ACTIVE_PINPAD, new MapArgs().put("appName", "Loja").put("stoneCode", "123456789"),
+                "activate", "Loja", "123456789");
         assertAction(PaymentMethod.ACTIVE_PINPAD_CREDENTIALS,
-                new MapArgs().put("appName", "Loja").put("stoneCode", "***REMOVIDO***").put("qrCodeAuthorization", "tok").put("qrCodeProviderid", "prov"),
-                "activateCredentials", "Loja", "***REMOVIDO***", "tok", "prov");
+                new MapArgs().put("appName", "Loja").put("stoneCode", "123456789").put("qrCodeAuthorization", "tok").put("qrCodeProviderid", "prov"),
+                "activateCredentials", "Loja", "123456789", "tok", "prov");
         assertAction(PaymentMethod.PAYMENT_ABORT_PIX, new MapArgs(), "abortPix");
         assertAction(PaymentMethod.PAYMENT_ABORT, new MapArgs(), "abort");
         assertAction(PaymentMethod.PAYMENT_ABORT_ACTIVATION, new MapArgs(), "abortActivation");
@@ -286,6 +283,7 @@ public class MethodDispatcherTest {
         }
         assertNull(PaymentMethod.fromString("paymentRefund"));
         assertNull(PaymentMethod.fromString(null));
-        assertEquals(24, PaymentMethod.values().length);
+        assertNull("checkLicence foi removido", PaymentMethod.fromString("checkLicence"));
+        assertEquals(23, PaymentMethod.values().length);
     }
 }
