@@ -32,3 +32,6 @@ doc/api/
 .fvm/example/ios/Flutter/ephemeral/
 android/native/local.properties
 *.hprof
+
+# Keystores de desenvolvimento (locais, não versionar)
+example/Chaves/
